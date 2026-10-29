@@ -8,7 +8,7 @@ var activeKarigerId = null;
 var activeSheetIndex = 0;
 var currentKarigerKarkhanaFilter = "all"; // "all" ya specific karkhanaId
 
-// 🎯 ULTRA-FAST PAGINATION ENGINE (Smooth Mobile & PC Performance)
+// 🎯 ULTRA-FAST PAGINATION ENGINE (50 Karigers Per Page Mobile Optimization)
 var currentKarigerPage = 1;
 var karigerPageSize = 50;
 
@@ -181,6 +181,7 @@ function executeYearEndClosingProcess() {
                 karkhanaId: k.id,
                 karkhanaName: k.name,
                 pcs: kPcs,
+                openingPcs: kPcs,
                 outPcs: 0,
                 isOpening: true
             });
@@ -197,6 +198,7 @@ function executeYearEndClosingProcess() {
             name: "Calender Finished Saree",
             source: "📦 Opening Stock (" + curSess + " Se Aaya)",
             pcs: finTotalPcs,
+            openingPcs: finTotalPcs,
             isOpening: true
         });
     }
@@ -218,6 +220,7 @@ function executeYearEndClosingProcess() {
                 karkhanaId: k.id,
                 karkhanaName: k.name,
                 pcs: lPcs,
+                openingPcs: lPcs,
                 isOpening: true
             });
         }
@@ -243,10 +246,11 @@ function executeYearEndClosingProcess() {
             }
             if (bachaQty > 0) {
                 newBanaStock.push({
-                    id: "bana_open_" + k.id + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                    id: Date.now() + Math.random(),
                     name: displayName,
                     date: getTodayDate(),
                     aaya: Number(bachaQty.toFixed(2)),
+                    openingAaya: Number(bachaQty.toFixed(2)),
                     gaya: 0,
                     bacha: Number(bachaQty.toFixed(2)),
                     karkhanaId: k.id,
@@ -278,10 +282,11 @@ function executeYearEndClosingProcess() {
             }
             if (bachaQty > 0) {
                 newZariStock.push({
-                    id: "zari_open_" + k.id + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                    id: Date.now() + Math.random(),
                     name: displayName,
                     date: getTodayDate(),
                     aaya: Number(bachaQty.toFixed(2)),
+                    openingAaya: Number(bachaQty.toFixed(2)),
                     gaya: 0,
                     bacha: Number(bachaQty.toFixed(2)),
                     karkhanaId: k.id,
@@ -314,6 +319,7 @@ function executeYearEndClosingProcess() {
                     karkhanaName: k.name,
                     date: getTodayDate(),
                     aaya: Math.max(0, bachaQty),
+                    openingAaya: Math.max(0, bachaQty),
                     note: "📦 Opening Stock (" + curSess + " Se Aaya)",
                     isOpening: true
                 });
@@ -764,7 +770,7 @@ function searchKariger() {
     renderKarigerTable();
 }
 
-// 🎯 ULTRA-FAST PAGINATION RENDERER (50 PER PAGE - 0ms LAG)
+// 🎯 ULTRA-FAST PAGINATION RENDERER (50 PER PAGE - ZERO LAG)
 function renderKarigerTable() {
     var tbody = document.getElementById("kariger-table-body");
     if (!tbody) return;
@@ -881,10 +887,6 @@ function prevKarigerPage() {
 function sendKarigerTagadaWhatsApp(karId, days) {
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(karId); });
     if (!k) return;
-
-    var info = safeArray(getStore("info_ledger")).find(function(i) { 
-        return i && i.name && i.name.toUpperCase() === k.name.toUpperCase(); 
-    });
 
     var msg = "सलाम " + k.name + " भाई,\n\n" +
               "कारखाने से साड़ी का काम ले जाए आपको *" + days + " दिन* हो चुके हैं, और अभी तक कोई माल या हिसाब जमा नहीं हुआ है।\n\n" +
