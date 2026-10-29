@@ -1,7 +1,7 @@
 /* ========================================================
    SIMPLICITY ERP - KARIGER MASTER, MULTI-KARKHANA & SEQUENTIAL CLOSING
    File 2 of 5 • Developed by Farhan Jawed
-   (Sequential 5-Step Year-End Download, 10-10 Chunking & Welcome Celebration)
+   (100% Freeze-Proof 5-Step Sequential Engine & Celebration Welcome)
 ======================================================== */
 
 var activeKarigerId = null;
@@ -12,7 +12,7 @@ var currentKarigerKarkhanaFilter = "all"; // "all" ya specific karkhanaId
 var currentKarigerPage = 1;
 var karigerPageSize = 50;
 
-// ================= 1. 📅 FINANCIAL YEAR SESSION SYSTEM (SEQUENTIAL CLOSING) =================
+// ================= 1. 📅 FINANCIAL YEAR SESSION SYSTEM =================
 
 function getAppSessions() {
     var userKey = (currentUserId || "app") + "_app_sessions_list";
@@ -109,13 +109,13 @@ function closeSessionClosingModal() {
     setDisplay("session-closing-modal", "none");
 }
 
-// ================= 🎬 5-STEP BARI-BARI DOWNLOAD & CLOSING ENGINE =================
+// ================= 🎬 5-STEP SEQUENTIAL CHUNKED ENGINE =================
 
 var pendingTransferNewSession = null;
 var stage1_oldKarigers = [];
 var stage1_newKarigerSheetsMap = {};
 var stage1_idx = 0;
-var stage1_chunkSize = 10; // ⚡ 10-10 Kariger Ka Smooth Tukda!
+var stage1_chunkSize = 10; // 10-10 Kariger Chunk
 
 var stage2_newSareeStock = [];
 var stage2_newFinStock = [];
@@ -128,6 +128,10 @@ var stage4_newSanchaItems = [];
 var stage4_oldJwWorkers = [];
 var stage4_newJwSheetsMap = {};
 var stage4_pendingBills = [];
+
+var stage5_keys = [];
+var stage5_idx = 0;
+var stage5_chunkSize = 25; // ⚡ Step 5 me bhi 25-25 karke save hoga! Zero Freeze!
 
 function startSequentialYearClosing() {
     var curSess = getActiveFinancialSession();
@@ -145,12 +149,10 @@ function startSequentialYearClosing() {
     closeSessionClosingModal();
     pendingTransferNewSession = newSess;
 
-    // Setup Progress Window
     setDisplay("session-transfer-modal", "flex");
     setDisplay("transfer-progress-view", "block");
     setDisplay("transfer-welcome-view", "none");
 
-    // Reset All 5 Stage Bars & Badges
     for (var i = 1; i <= 5; i++) {
         var bar = document.getElementById("stage-bar-" + i);
         var badge = document.getElementById("stage-badge-" + i);
@@ -166,13 +168,12 @@ function startSequentialYearClosing() {
     var mainBar = document.getElementById("transfer-main-bar");
     if (mainBar) mainBar.style.width = "0%";
 
-    // Start Step 1 Smoothly
     setTimeout(function() {
         runStage1_Karigers(curSess, newSess);
     }, 150);
 }
 
-// --- STAGE 1: 🧵 KARIGER KHATA (10-10 KARKE) ---
+// --- STAGE 1: 🧵 KARIGER KHATA (10-10 CHUNKS) ---
 function runStage1_Karigers(curSess, newSess) {
     stage1_oldKarigers = safeArray(getStore("kariger_list"));
     stage1_newKarigerSheetsMap = {};
@@ -226,7 +227,7 @@ function processNextKarigerChunk(curSess, newSess) {
 
     if (bar1) bar1.style.width = pct + "%";
     if (status1) status1.textContent = "⏳ Downloading: " + stage1_idx + " / " + total + " Kariger (" + pct + "%)";
-    if (mainBar) mainBar.style.width = Math.floor(pct * 0.4) + "%"; // Stage 1 covers up to 40%
+    if (mainBar) mainBar.style.width = Math.floor(pct * 0.4) + "%";
 
     if (stage1_idx < total) {
         setTimeout(function() {
@@ -241,7 +242,6 @@ function processNextKarigerChunk(curSess, newSess) {
         }
         if (status1) status1.textContent = "✅ Sabhi " + total + " Karigaron Ka Hisab Naye Saal Me Transfer Ho Gaya!";
         
-        // Stage 1 Done ➔ Move to Stage 2
         setTimeout(function() {
             runStage2_SareeStock(curSess, newSess);
         }, 200);
@@ -337,7 +337,6 @@ function runStage2_SareeStock(curSess, newSess) {
         if (status2) status2.textContent = "✅ Fresh, Finished Aur Lott Saree Opening Stock Lock Ho Gaya!";
         if (mainBar) mainBar.style.width = "55%";
 
-        // Stage 2 Done ➔ Move to Stage 3
         setTimeout(function() {
             runStage3_BanaZariStock(curSess, newSess);
         }, 200);
@@ -442,7 +441,6 @@ function runStage3_BanaZariStock(curSess, newSess) {
         if (status3) status3.textContent = "✅ Bana Aur Zari Ka Opening Stock Hamesha Ke Liye Freeze!";
         if (mainBar) mainBar.style.width = "72%";
 
-        // Stage 3 Done ➔ Move to Stage 4
         setTimeout(function() {
             runStage4_SanchaJobwork(curSess, newSess);
         }, 200);
@@ -531,29 +529,27 @@ function runStage4_SanchaJobwork(curSess, newSess) {
         if (status4) status4.textContent = "✅ Sancha & Job Work Accounts Naye Saal Me Tayyar!";
         if (mainBar) mainBar.style.width = "88%";
 
-        // Stage 4 Done ➔ Move to Stage 5
         setTimeout(function() {
             runStage5_AtomicLock(curSess, newSess);
         }, 200);
     }, 150);
 }
 
-// --- STAGE 5: 🔒 FINAL SAFE CLOUD & DATABASE LOCK ---
+// --- STAGE 5: 🔒 FINAL SAFE CHUNKED SAVE (ZERO FREEZE!) ---
 function runStage5_AtomicLock(curSess, newSess) {
     var badge5 = document.getElementById("stage-badge-5");
     var bar5 = document.getElementById("stage-bar-5");
     var status5 = document.getElementById("stage-status-5");
-    var mainBar = document.getElementById("transfer-main-bar");
 
     if (badge5) {
-        badge5.textContent = "🔒 Locking...";
+        badge5.textContent = "⏳ Saving...";
         badge5.style.background = "#eff6ff";
         badge5.style.color = "#2563eb";
     }
-    if (bar5) bar5.style.width = "50%";
-    if (status5) status5.textContent = "🔒 Naye Session Ka Data Secure Write Ho Raha Hai...";
+    if (bar5) bar5.style.width = "10%";
+    if (status5) status5.textContent = "🔒 Session & Master Stock Save Ho Raha Hai...";
 
-    // Final Atomic Update (New session key activated only at this final moment!)
+    // 1. Session keys update
     var sessions = getAppSessions();
     if (sessions.indexOf(newSess) === -1) sessions.push(newSess);
 
@@ -562,11 +558,8 @@ function runStage5_AtomicLock(curSess, newSess) {
     setStore("app_sessions_list", sessions);
     setStore("app_active_session", newSess);
 
-    // Save all new records into the active new year store
+    // 2. Chote stocks pehle save karein
     setStore("kariger_list", stage1_oldKarigers);
-    for (var kId in stage1_newKarigerSheetsMap) {
-        setStore("kariger_sheets_" + kId, stage1_newKarigerSheetsMap[kId]);
-    }
     setStore("saree_stock", stage2_newSareeStock);
     setStore("finished_saree_stock", stage2_newFinStock);
     setStore("lott_saree_stock", stage2_newLottStock);
@@ -587,8 +580,42 @@ function runStage5_AtomicLock(curSess, newSess) {
     setStore("saree_transfers", []);
     setStore("dukan_transfer_history", []);
 
+    // 3. Ab 2,000 sheets ko 25-25 ke tukdon me save karein! (NO FREEZE)
+    stage5_keys = Object.keys(stage1_newKarigerSheetsMap);
+    stage5_idx = 0;
+
     setTimeout(function() {
-        if (bar5) bar5.style.width = "100%";
+        processNextSaveChunk(newSess);
+    }, 100);
+}
+
+function processNextSaveChunk(newSess) {
+    var total = stage5_keys.length;
+    var end = Math.min(stage5_idx + stage5_chunkSize, total);
+
+    for (var i = stage5_idx; i < end; i++) {
+        var kId = stage5_keys[i];
+        setStore("kariger_sheets_" + kId, stage1_newKarigerSheetsMap[kId]);
+    }
+
+    stage5_idx = end;
+
+    var pct = total > 0 ? Math.floor((stage5_idx / total) * 100) : 100;
+    var bar5 = document.getElementById("stage-bar-5");
+    var status5 = document.getElementById("stage-status-5");
+    var mainBar = document.getElementById("transfer-main-bar");
+
+    if (bar5) bar5.style.width = pct + "%";
+    if (status5) status5.textContent = "🔒 Database Me Save Ho Raha Hai: " + stage5_idx + " / " + total + " (" + pct + "%)";
+    if (mainBar) mainBar.style.width = (88 + Math.floor(pct * 0.12)) + "%";
+
+    if (stage5_idx < total) {
+        setTimeout(function() {
+            processNextSaveChunk(newSess);
+        }, 15);
+    } else {
+        // 🎉 100% COMPLETE!
+        var badge5 = document.getElementById("stage-badge-5");
         if (badge5) {
             badge5.textContent = "✅ Done";
             badge5.style.background = "#ecfdf5";
@@ -597,15 +624,14 @@ function runStage5_AtomicLock(curSess, newSess) {
         if (status5) status5.textContent = "✅ Naya Saal Safalta-purvak Surakshit Ho Chuka Hai!";
         if (mainBar) mainBar.style.width = "100%";
 
-        // 🎉 TRIGGER CELEBRATION WELCOME CARD
+        // WELCOME SCREEN SHOW
         setTimeout(function() {
             setDisplay("transfer-progress-view", "none");
             setDisplay("transfer-welcome-view", "block");
             var welSess = document.getElementById("welcome-session-name");
             if (welSess) welSess.textContent = newSess;
-        }, 350);
-
-    }, 250);
+        }, 300);
+    }
 }
 
 function finishSessionTransferAndEnter() {
