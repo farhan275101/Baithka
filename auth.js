@@ -1,7 +1,7 @@
 /* ========================================================
-   SIMPLICITY ERP - FIREBASE, INDEXEDDB (NO 5MB LIMIT), AUTH & BULLETPROOF DOWNLOAD
+   SIMPLICITY ERP - FIREBASE, INDEXEDDB, BACKUP VIEWER & DOWNLOAD ENGINE
    File 1 of 5 • Developed by Farhan Jawed
-   (Enterprise Storage Engine: IndexedDB + In-Memory RAM Cache + 1-Click Universal Download)
+   (Enterprise Storage Engine: IndexedDB + RAM Cache + Universal Download + Read-Only Backup Viewer)
 ======================================================== */
 
 // 1. FIREBASE CONFIGURATION & INITIALIZATION
@@ -26,6 +26,10 @@ var targetResetUser = null;
 var currentPassbookContext = null;
 var activeSanchaItemId = null;
 var isRemoteUpdating = false;
+
+// 👁️ READ-ONLY BACKUP VIEWER STATE (LIVE DATA SURAKSHIT RAKHNE KE LIYE)
+var isBackupPreviewMode = false;
+var PREVIEW_BACKUP_DATA = null;
 
 // FAST RUNTIME RAM CACHE
 var APP_MEMORY_CACHE = {};
@@ -70,6 +74,15 @@ function isDateInRange(itemDate, fromDate, toDate) {
 function showSyncStatus(status) {
     var badge = document.getElementById("cloud-status-badge");
     if (!badge) return;
+
+    if (isBackupPreviewMode) {
+        badge.className = "sync-badge";
+        badge.style.background = "#fef08a";
+        badge.style.color = "#854d0e";
+        badge.style.borderColor = "#eab308";
+        badge.innerHTML = "👁️ Preview Mode (No Sync)";
+        return;
+    }
 
     if (status === "syncing") {
         badge.className = "sync-badge sync-syncing";
@@ -231,9 +244,27 @@ function getStorageKey(key) {
     return currentUserId + "_" + sess + "_" + key;
 }
 
-// 0.001 SECOND ULTRA-FAST GETSTORE
+// 0.001 SECOND ULTRA-FAST GETSTORE (WITH BACKUP PREVIEW INTERCEPTOR)
 function getStore(key) {
+    // 👁️ 1. BACKUP PREVIEW MODE: Sirf Padhne Ke Liye (RAM Memory Se Return Karega)
+    if (isBackupPreviewMode && PREVIEW_BACKUP_DATA) {
+        if (key.indexOf("kariger_sheets_") === 0) {
+            var kId = key.replace("kariger_sheets_", "");
+            return safeArray(PREVIEW_BACKUP_DATA.sheets ? PREVIEW_BACKUP_DATA.sheets[kId] : []);
+        }
+        if (key.indexOf("jobwork_sheets_") === 0) {
+            var wId = key.replace("jobwork_sheets_", "");
+            return safeArray(PREVIEW_BACKUP_DATA.jobwork_sheets ? PREVIEW_BACKUP_DATA.jobwork_sheets[wId] : []);
+        }
+        if (PREVIEW_BACKUP_DATA.data && PREVIEW_BACKUP_DATA.data.hasOwnProperty(key)) {
+            var pVal = PREVIEW_BACKUP_DATA.data[key];
+            return Array.isArray(pVal) ? safeArray(pVal) : pVal;
+        }
+        return [];
+    }
+
     if (!currentUserId) return [];
+
     try {
         var fullKey = getStorageKey(key);
 
@@ -269,8 +300,13 @@ function getStore(key) {
     }
 }
 
-// UNLIMITED CAPACITY SETSTORE
+// UNLIMITED CAPACITY SETSTORE (PREVIEW MODE ME WRITE COMPLETELY BLOCKED!)
 function setStore(key, data) {
+    if (isBackupPreviewMode) {
+        console.warn("Write blocked: App is currently in Read-Only Backup Preview Mode.");
+        return;
+    }
+
     if (!currentUserId) return;
     try {
         var fullKey = getStorageKey(key);
@@ -314,6 +350,7 @@ function initFirebaseLiveListeners() {
     if (!db || !currentUserId) return;
     try {
         db.ref("users/" + currentUserId).on("value", function(snapshot) {
+            if (isBackupPreviewMode) return; // Preview mode me cloud update se screen nahi hilegi
             var val = snapshot.val();
             if (val) {
                 isRemoteUpdating = true;
@@ -374,7 +411,7 @@ function sanitizeKarigerList() {
     return clean;
 }
 
-// 4. 🚀 100% BULLETPROOF INSTANT DOWNLOAD & RESTORE ENGINE (PC & MOBILE)
+// 4. 🚀 100% BULLETPROOF DOWNLOAD, VIEWER & RESTORE ENGINE
 function exportUserFullData() {
     var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
     var keys = [
@@ -422,7 +459,7 @@ function exportUserFullData() {
     return obj;
 }
 
-// ⚡ 1-Click Guaranteed Download (Mobile & PC Both)
+// ⚡ 1-Click Universal Instant Download (PC & Mobile Guaranteed)
 function syncToGoogleDrive() {
     downloadBackupFile();
 }
@@ -430,7 +467,6 @@ function syncToGoogleDrive() {
 function downloadBackupFile() {
     if (!currentUserId) return alert("Pehle login karein!");
 
-    // Button par loading feedback
     var btn = document.querySelector(".welcome-banner button[onclick*='syncToGoogleDrive']");
     var origHtml = btn ? btn.innerHTML : "";
     if (btn) btn.innerHTML = "⏳ File Ban Rahi Hai...";
@@ -441,11 +477,9 @@ function downloadBackupFile() {
             var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
             var fileName = currentUserId + "_" + sess + "_Backup_" + formatDateDisplay(getTodayDate()) + ".json";
 
-            // Compact JSON without extra whitespace inflation
             var jsonString = JSON.stringify(data);
             var blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
 
-            // Direct Anchor Click (Unblocked by browser security)
             var downloadUrl = window.URL.createObjectURL(blob);
             var a = document.createElement("a");
             a.style.display = "none";
@@ -454,7 +488,6 @@ function downloadBackupFile() {
             document.body.appendChild(a);
             a.click();
 
-            // Non-blocking cleanup
             setTimeout(function() {
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(downloadUrl);
@@ -468,9 +501,67 @@ function downloadBackupFile() {
     }, 50);
 }
 
+// 👁️ READ-ONLY BACKUP VIEWER ENGINE (ZERO OVERWRITE • ZERO CLOUD SYNC)
+function openBackupViewer(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            var parsed = JSON.parse(evt.target.result);
+            if (parsed && (parsed.data || parsed.sheets)) {
+                isBackupPreviewMode = true;
+                PREVIEW_BACKUP_DATA = parsed;
+
+                var banner = document.getElementById("backup-preview-banner");
+                var dateText = document.getElementById("preview-banner-date");
+                if (banner) banner.style.display = "flex";
+                if (dateText) {
+                    var sLabel = parsed.session ? (parsed.session + " • ") : "";
+                    var dLabel = parsed.exportDate ? formatDateDisplay(String(parsed.exportDate).substring(0, 10)) : "Purana Backup";
+                    dateText.textContent = sLabel + dLabel;
+                }
+
+                if (typeof backToDashboard === "function") backToDashboard();
+                showSyncStatus("preview");
+
+                alert("👁️ BACKUP PREVIEW MODE CHALU HO GAYA!\n\n" +
+                      "• Yeh data sirf dekhne ke liye khula hai.\n" +
+                      "• Aapka aaj ka live data 100% surakshit hai.\n" +
+                      "• Aap doosre tab me apna live ERP khol kar data match ya copy kar sakte hain!\n" +
+                      "• Preview band karne ke liye upar laal 'Exit Preview' button dabayein.");
+            } else {
+                alert("Galat backup file format! Kripya ERP ki sahi .json file chunein.");
+            }
+        } catch(err) {
+            alert("File Padhne Me Error: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+}
+
+function exitBackupPreviewMode() {
+    isBackupPreviewMode = false;
+    PREVIEW_BACKUP_DATA = null;
+    var banner = document.getElementById("backup-preview-banner");
+    if (banner) banner.style.display = "none";
+
+    if (typeof backToDashboard === "function") backToDashboard();
+    showSyncStatus("online");
+    alert("✅ Preview Mode band ho gaya! Ab aap apne live current ERP me hain.");
+}
+
+// 📥 FULL LIVE RESTORE
 function restoreBackupFile(e) {
     var file = e.target.files[0];
     if (!file) return;
+
+    if (!confirm("⚠️ KYA AAP IS BACKUP KO LIVE RESTORE KARNA CHAHTE HAIN?\n\nIs se aapka current live data is file se badal jayega.")) {
+        e.target.value = "";
+        return;
+    }
 
     var reader = new FileReader();
     reader.onload = function(evt) {
@@ -490,7 +581,7 @@ function restoreBackupFile(e) {
                         setStore("jobwork_sheets_" + jwWorkerId, parsed.jobwork_sheets[jwWorkerId]);
                     }
                 }
-                alert("✅ Data successfully restore ho gaya!");
+                alert("✅ Data successfully live restore ho gaya!");
                 if (typeof populateSessionDropdown === "function") populateSessionDropdown();
                 if (typeof backToDashboard === "function") backToDashboard();
             }
