@@ -1,7 +1,7 @@
 /* ========================================================
-   SIMPLICITY ERP - FIREBASE, INDEXEDDB (NO 5MB LIMIT), AUTH & BACKUP ENGINE
+   SIMPLICITY ERP - FIREBASE, INDEXEDDB (NO 5MB LIMIT), AUTH & BULLETPROOF DOWNLOAD
    File 1 of 5 • Developed by Farhan Jawed
-   (Enterprise Storage Engine: IndexedDB + In-Memory RAM Cache + One-Tap Drive/Gmail Sync)
+   (Enterprise Storage Engine: IndexedDB + In-Memory RAM Cache + 1-Click Universal Download)
 ======================================================== */
 
 // 1. FIREBASE CONFIGURATION & INITIALIZATION
@@ -27,7 +27,7 @@ var currentPassbookContext = null;
 var activeSanchaItemId = null;
 var isRemoteUpdating = false;
 
-// FAST RUNTIME RAM CACHE (Screen Freeze Rokne ke liye)
+// FAST RUNTIME RAM CACHE
 var APP_MEMORY_CACHE = {};
 
 try {
@@ -166,7 +166,6 @@ function initIndexedDBPreload(callback) {
     });
 }
 
-// SILENT AUTO-MIGRATION (Purana data bina khoe IndexedDB me lana)
 function migrateLocalStorageToCache() {
     try {
         for (var i = 0; i < localStorage.length; i++) {
@@ -186,7 +185,6 @@ function migrateLocalStorageToCache() {
     } catch(e) {}
 }
 
-// Global keys jo saal badalne par change nahi honi chahiye
 var GLOBAL_APP_KEYS = [
     "app_sessions_list",
     "app_active_session",
@@ -233,13 +231,12 @@ function getStorageKey(key) {
     return currentUserId + "_" + sess + "_" + key;
 }
 
-// 0.001 SECOND ULTRA-FAST GETSTORE (Directly from Memory/IndexedDB)
+// 0.001 SECOND ULTRA-FAST GETSTORE
 function getStore(key) {
     if (!currentUserId) return [];
     try {
         var fullKey = getStorageKey(key);
 
-        // 1. Instant Cache Match
         if (APP_MEMORY_CACHE.hasOwnProperty(fullKey)) {
             var val = APP_MEMORY_CACHE[fullKey];
             if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return val;
@@ -248,7 +245,6 @@ function getStore(key) {
             return val;
         }
 
-        // 2. Fallback to LocalStorage
         var raw = localStorage.getItem(fullKey);
         if (raw === null || raw === undefined) {
             var oldKey = currentUserId + "_" + key;
@@ -273,7 +269,7 @@ function getStore(key) {
     }
 }
 
-// UNLIMITED CAPACITY SETSTORE (Saves to Cache + IndexedDB + Firebase)
+// UNLIMITED CAPACITY SETSTORE
 function setStore(key, data) {
     if (!currentUserId) return;
     try {
@@ -283,18 +279,13 @@ function setStore(key, data) {
             toSave = safeArray(data);
         }
 
-        // 1. Instant RAM Cache Update (0ms delay)
         APP_MEMORY_CACHE[fullKey] = toSave;
-
-        // 2. High-Capacity IndexedDB Save (No 5MB Limit!)
         idbPut(fullKey, toSave);
 
-        // 3. LocalStorage safety try-catch
         try {
             localStorage.setItem(fullKey, JSON.stringify(toSave));
         } catch(storageLimitErr) {}
 
-        // 4. Firebase Cloud Sync
         if (db && !isRemoteUpdating && currentUserId) {
             showSyncStatus("syncing");
             var fbKey = fullKey.replace(currentUserId + "_", "");
@@ -383,7 +374,7 @@ function sanitizeKarigerList() {
     return clean;
 }
 
-// 4. DATA BACKUP & RESTORE (TAREEQA 2: ONE-TAP GOOGLE DRIVE / GMAIL SHARE)
+// 4. 🚀 100% BULLETPROOF INSTANT DOWNLOAD & RESTORE ENGINE (PC & MOBILE)
 function exportUserFullData() {
     var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
     var keys = [
@@ -408,59 +399,73 @@ function exportUserFullData() {
         obj.data[k] = getStore(k); 
     });
 
-    var karigers = sanitizeKarigerList();
+    var karigers = (typeof sanitizeKarigerList === "function") ? sanitizeKarigerList() : safeArray(getStore("kariger_list"));
     karigers.forEach(function(k) {
-        if (k && k.id && typeof getKarigerSheets === "function") {
-            obj.sheets[k.id] = getKarigerSheets(k.id);
+        if (k && k.id) {
+            var sh = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : getStore("kariger_sheets_" + k.id);
+            if (sh && sh.length) {
+                obj.sheets[k.id] = sh;
+            }
         }
     });
 
-    if (typeof getJobWorkers === "function" && typeof getJobWorkerSheets === "function") {
-        getJobWorkers().forEach(function(w) {
-            if (w && w.id) {
-                obj.jobwork_sheets[w.id] = getJobWorkerSheets(w.id);
+    var jwWorkers = (typeof getJobWorkers === "function") ? getJobWorkers() : safeArray(getStore("jobwork_workers"));
+    jwWorkers.forEach(function(w) {
+        if (w && w.id) {
+            var jwSh = (typeof getJobWorkerSheets === "function") ? getJobWorkerSheets(w.id) : getStore("jobwork_sheets_" + w.id);
+            if (jwSh && jwSh.length) {
+                obj.jobwork_sheets[w.id] = jwSh;
             }
-        });
-    }
+        }
+    });
 
     return obj;
 }
 
-async function syncToGoogleDrive() {
-    if (!currentUserId) return alert("Pehle login karein!");
-    var data = exportUserFullData();
-    var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
-    var fileName = currentUserId + "_" + sess + "_Backup_" + formatDateDisplay(getTodayDate()) + ".json";
-    var file = new File([JSON.stringify(data, null, 2)], fileName, { type: "application/json" });
-
-    // Tareeqa 2: Phone par Google Drive ("Save to Drive") aur Gmail popup khulega
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-            await navigator.share({ 
-                files: [file], 
-                title: "Simplicity ERP Backup",
-                text: "Simplicity ERP Backup File (" + sess + " • " + formatDateDisplay(getTodayDate()) + ")"
-            });
-        } catch (err) {
-            downloadBackupFile();
-        }
-    } else {
-        downloadBackupFile();
-    }
+// ⚡ 1-Click Guaranteed Download (Mobile & PC Both)
+function syncToGoogleDrive() {
+    downloadBackupFile();
 }
 
 function downloadBackupFile() {
     if (!currentUserId) return alert("Pehle login karein!");
-    var data = exportUserFullData();
-    var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
-    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = currentUserId + "_" + sess + "_Backup_" + formatDateDisplay(getTodayDate()) + ".json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    alert("📥 Backup file download ho gayi hai! Ise apne Gmail ya Google Drive par safe rakh lein.");
+
+    // Button par loading feedback
+    var btn = document.querySelector(".welcome-banner button[onclick*='syncToGoogleDrive']");
+    var origHtml = btn ? btn.innerHTML : "";
+    if (btn) btn.innerHTML = "⏳ File Ban Rahi Hai...";
+
+    setTimeout(function() {
+        try {
+            var data = exportUserFullData();
+            var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
+            var fileName = currentUserId + "_" + sess + "_Backup_" + formatDateDisplay(getTodayDate()) + ".json";
+
+            // Compact JSON without extra whitespace inflation
+            var jsonString = JSON.stringify(data);
+            var blob = new Blob([jsonString], { type: "application/json;charset=utf-8" });
+
+            // Direct Anchor Click (Unblocked by browser security)
+            var downloadUrl = window.URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.style.display = "none";
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+
+            // Non-blocking cleanup
+            setTimeout(function() {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(downloadUrl);
+                if (btn) btn.innerHTML = origHtml;
+            }, 300);
+
+        } catch (err) {
+            if (btn) btn.innerHTML = origHtml;
+            alert("Download Error: " + err.message);
+        }
+    }, 50);
 }
 
 function restoreBackupFile(e) {
