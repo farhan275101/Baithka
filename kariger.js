@@ -1,14 +1,14 @@
 /* ========================================================
    SIMPLICITY ERP - KARIGER MASTER, MULTI-KARKHANA & SESSION ENGINE
    File 2 of 5 • Developed by Farhan Jawed
-   (Enterprise Pagination Engine, 2000+ Fast Render, Wastage & Tagada System)
+   (Enterprise Pagination Engine, Fast Render, Wastage & Tagada System)
 ======================================================== */
 
 var activeKarigerId = null;
 var activeSheetIndex = 0;
 var currentKarigerKarkhanaFilter = "all"; // "all" ya specific karkhanaId
 
-// 🎯 ULTRA-FAST PAGINATION ENGINE (2,000+ Kariger Mobile Optimization)
+// 🎯 ULTRA-FAST PAGINATION ENGINE (Smooth Mobile & PC Performance)
 var currentKarigerPage = 1;
 var karigerPageSize = 50;
 
@@ -243,7 +243,7 @@ function executeYearEndClosingProcess() {
             }
             if (bachaQty > 0) {
                 newBanaStock.push({
-                    id: Date.now() + Math.random(),
+                    id: "bana_open_" + k.id + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
                     name: displayName,
                     date: getTodayDate(),
                     aaya: Number(bachaQty.toFixed(2)),
@@ -278,7 +278,7 @@ function executeYearEndClosingProcess() {
             }
             if (bachaQty > 0) {
                 newZariStock.push({
-                    id: Date.now() + Math.random(),
+                    id: "zari_open_" + k.id + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
                     name: displayName,
                     date: getTodayDate(),
                     aaya: Number(bachaQty.toFixed(2)),
@@ -553,7 +553,7 @@ function renderKarigerKarkhanaTabs() {
 
 function switchKarigerKarkhanaTab(kId) {
     currentKarigerKarkhanaFilter = kId;
-    currentKarigerPage = 1; // Tab badalne par Page 1 par jaye
+    currentKarigerPage = 1;
     renderKarigerKarkhanaTabs();
     renderKarigerTable();
 }
@@ -796,7 +796,6 @@ function renderKarigerTable() {
     if (currentKarigerPage > totalPages) currentKarigerPage = totalPages;
     if (currentKarigerPage < 1) currentKarigerPage = 1;
 
-    // Pagination container setup
     var pagContainer = document.getElementById("kariger-pagination-bar");
     if (!pagContainer) {
         var tableWrap = tbody.closest(".table-responsive");
@@ -831,7 +830,6 @@ function renderKarigerTable() {
             "</div>";
     }
 
-    // 0ms Fast Slice & Single Buffer Render
     var pageList = list.slice((currentKarigerPage - 1) * karigerPageSize, currentKarigerPage * karigerPageSize);
     var htmlBuffer = "";
 
@@ -1635,64 +1633,4 @@ function searchInfoLedger() {
         return (String(i.name || "") + " " + String(i.saree || "") + " " + String(i.address || "")).toLowerCase().indexOf(txt) !== -1;
     });
     renderInfoTable(list);
-}
-
-// ================= 8. 🧪 2,000 TEST KARIGER GENERATOR =================
-
-function generate2000TestKarigers() {
-    if (!currentUserId) return alert("Pehle login karein!");
-    
-    var btn = document.getElementById("btn-generate-dummy");
-    if (btn) btn.textContent = "⏳ 2,000 Kariger Ban Rahe Hain...";
-
-    setTimeout(function() {
-        var names = [
-            "RAMESH", "SURESH", "MOHAN", "ASLAM", "IMRAN", 
-            "BABLU", "RAJU", "GUDDU", "CHANDAN", "SALIM", 
-            "DILSHAD", "AKHTAR", "MUKESH", "NAEEM", "SUNIL", 
-            "KALLU", "RASHID", "FAROOQ", "DINESH", "ANIL"
-        ];
-        var sarees = [
-            "Banarasi Katan", "Tanchoi Silk", "Organza Zari", 
-            "Georgette Booti", "Tissue Fancy", "Chiffon Handwork", 
-            "Kora Kadwa", "Meena Buti"
-        ];
-        
-        var list = [];
-        var today = getTodayDate();
-
-        for (var i = 1; i <= 2000; i++) {
-            var nameIdx = (i - 1) % names.length;
-            var sareeIdx = (i - 1) % sarees.length;
-            var karId = "kar_test_" + i;
-
-            list.push({
-                id: karId,
-                name: names[nameIdx] + " (NO. " + i + ")",
-                saree: sarees[sareeIdx],
-                date: today,
-                karkhanaId: "k_main",
-                karkhanaName: "Main Godown"
-            });
-        }
-
-        saveKarigerList(list);
-        currentKarigerPage = 1;
-        renderKarigerKarkhanaTabs();
-        renderKarigerTable();
-        if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-
-        if (btn) btn.textContent = "🧪 +2,000 Test Kariger";
-        alert("🎉 2,000 Kariger successfully IndexedDB me load ho gaye!\nAb dekhein mobile kitna fast bina ruke chal raha hai.");
-    }, 100);
-}
-
-function clearAllTestKarigers() {
-    if (!confirm("Kya aap saare kariger delete karke list wapas saaf karna chahte hain?")) return;
-    saveKarigerList([]);
-    currentKarigerPage = 1;
-    renderKarigerKarkhanaTabs();
-    renderKarigerTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("🗑️ List wapas bilkul saaf ho gayi!");
 }
