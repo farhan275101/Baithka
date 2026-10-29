@@ -121,8 +121,9 @@
                 </div>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <span id="cloud-status-badge" class="sync-badge">🟢 Cloud Synced</span>
-                    <button class="add-btn" style="padding:6px 12px; font-size:12px; background:#0284c7;" onclick="syncToGoogleDrive()">☁️ Save</button>
-                    <button class="add-btn" style="padding:6px 12px; font-size:12px; background:#475569;" onclick="document.getElementById('banner-restore-input').click()">📥 Restore</button>
+                    <!-- ☁️ POLISHED GMAIL / GOOGLE DRIVE BACKUP BUTTON -->
+                    <button class="add-btn" style="padding:7px 14px; font-size:12px; font-weight:800; background:linear-gradient(135deg, #0284c7, #2563eb); box-shadow:0 2px 8px rgba(37,99,235,0.25);" onclick="syncToGoogleDrive()">☁️ Gmail / Drive Backup</button>
+                    <button class="add-btn" style="padding:7px 14px; font-size:12px; font-weight:700; background:#475569;" onclick="document.getElementById('banner-restore-input').click()">📥 Restore</button>
                     <input type="file" id="banner-restore-input" style="display:none;" accept=".json" onchange="restoreBackupFile(event)">
                 </div>
             </div>
@@ -370,7 +371,7 @@
                 </div>
             </div>
 
-            <!-- MODULE: KARIGER MASTER (ORIGINAL CLEAN HEADER) -->
+            <!-- MODULE: KARIGER MASTER -->
             <div id="kariger-section" class="module-section">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
@@ -812,7 +813,7 @@
                 <!-- VIEW 1: JOB WORK MAIN HUB -->
                 <div id="jw-hub-view">
                     <div class="module-header">
-                        <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                        <button class="back-btn" onclick="showJobWorkHub()">← Wapas Hub</button>
                         <h2 style="color:#0d9488; font-size:19px; font-weight:700;">🧵 Job Work & Finishing Hub</h2>
                         <div></div>
                     </div>
@@ -1502,11 +1503,11 @@
         </div>
     </div>
 
-    <!-- JAVASCRIPT SCRIPTS (Auto-Bust Cache v33) -->
-    <script src="auth.js?v=33"></script>
-    <script src="kariger.js?v=33"></script>
-    <script src="stock.js?v=33"></script>
-    <script src="jobwork.js?v=33"></script>
-    <script src="daybook.js?v=33"></script>
+    <!-- JAVASCRIPT SCRIPTS (Auto-Bust Cache v34) -->
+    <script src="auth.js?v=34"></script>
+    <script src="kariger.js?v=34"></script>
+    <script src="stock.js?v=34"></script>
+    <script src="jobwork.js?v=34"></script>
+    <script src="daybook.js?v=34"></script>
 </body>
 </html>
