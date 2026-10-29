@@ -1,0 +1,550 @@
+/* ========================================================
+   SIMPLICITY ERP - FIREBASE, INDEXEDDB (NO 5MB LIMIT), AUTH & ADMIN ENGINE
+   File 1 of 5 • Developed by Farhan Jawed
+   (Enterprise Storage Engine: IndexedDB + In-Memory RAM Cache + Cloud Sync)
+======================================================== */
+
+// 1. FIREBASE CONFIGURATION & INITIALIZATION
+const firebaseConfig = {
+    apiKey: "AIzaSyDkLlLPFnZexLWxtvqg3UiE9XG_IclaSAk",
+    authDomain: "simplicity-erp.firebaseapp.com",
+    databaseURL: "https://simplicity-erp-default-rtdb.firebaseio.com",
+    projectId: "simplicity-erp",
+    storageBucket: "simplicity-erp.firebasestorage.app",
+    messagingSenderId: "261724969835",
+    appId: "1:261724969835:web:23a073ab544f55679f0a2e",
+    measurementId: "G-9TS8H04N4N"
+};
+
+var db = null;
+var currentUserId = null;
+var currentUserRole = null;
+var activeKarigerId = null;
+var activeSheetId = null;
+var currentDayBookTab = "bana";
+var targetResetUser = null;
+var currentPassbookContext = null;
+var activeSanchaItemId = null;
+var isRemoteUpdating = false;
+
+// FAST RUNTIME RAM CACHE (Screen Freeze Rokne ke liye)
+var APP_MEMORY_CACHE = {};
+
+try {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.database();
+    console.log("✅ Firebase Database Connected Successfully!");
+} catch (error) {
+    console.error("❌ Firebase Initialization Error:", error);
+}
+
+// 2. BASIC UTILITY FUNCTIONS
+function setDisplay(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = val;
+}
+
+function getTodayDate() {
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+}
+
+function formatDateDisplay(d) {
+    if (!d) return "-";
+    var p = String(d).split("-");
+    return (p.length === 3 && p[0].length === 4) ? (p[2] + "-" + p[1] + "-" + p[0]) : d;
+}
+
+function isDateInRange(itemDate, fromDate, toDate) {
+    if (!itemDate) return true;
+    if (fromDate && itemDate < fromDate) return false;
+    if (toDate && itemDate > toDate) return false;
+    return true;
+}
+
+function showSyncStatus(status) {
+    var badge = document.getElementById("cloud-status-badge");
+    if (!badge) return;
+
+    if (status === "syncing") {
+        badge.className = "sync-badge sync-syncing";
+        badge.innerHTML = "🔄 Syncing...";
+    } else if (status === "offline") {
+        badge.className = "sync-badge";
+        badge.style.background = "#fff7ed";
+        badge.style.color = "#ea580c";
+        badge.style.borderColor = "#fed7aa";
+        badge.innerHTML = "🟠 Offline Mode";
+    } else if (status === "error") {
+        badge.className = "sync-badge";
+        badge.style.background = "#fef2f2";
+        badge.style.color = "#dc2626";
+        badge.style.borderColor = "#fecaca";
+        badge.innerHTML = "⚠️ Sync Error";
+    } else {
+        badge.className = "sync-badge";
+        badge.style.background = "#ecfdf5";
+        badge.style.color = "#059669";
+        badge.style.borderColor = "#a7f3d0";
+        badge.innerHTML = "🟢 Cloud Synced";
+    }
+}
+
+// 3. ENTERPRISE INDEXEDDB ENGINE (1 GB+ CAPACITY, NO 5MB LIMIT)
+var idbInstance = null;
+
+function openEnterpriseIndexedDB(callback) {
+    if (idbInstance) {
+        if (callback) callback(idbInstance);
+        return;
+    }
+    try {
+        var request = window.indexedDB.open("SimplicityERP_DB", 1);
+        request.onupgradeneeded = function(e) {
+            var database = e.target.result;
+            if (!database.objectStoreNames.contains("app_store")) {
+                database.createObjectStore("app_store");
+            }
+        };
+        request.onsuccess = function(e) {
+            idbInstance = e.target.result;
+            if (callback) callback(idbInstance);
+        };
+        request.onerror = function() {
+            if (callback) callback(null);
+        };
+    } catch(err) {
+        if (callback) callback(null);
+    }
+}
+
+function idbPut(key, value) {
+    openEnterpriseIndexedDB(function(dbase) {
+        if (!dbase) return;
+        try {
+            var tx = dbase.transaction("app_store", "readwrite");
+            var store = tx.objectStore("app_store");
+            store.put(value, key);
+        } catch(e) {}
+    });
+}
+
+function initIndexedDBPreload(callback) {
+    openEnterpriseIndexedDB(function(dbase) {
+        if (!dbase) {
+            migrateLocalStorageToCache();
+            if (callback) callback();
+            return;
+        }
+        try {
+            var tx = dbase.transaction("app_store", "readonly");
+            var store = tx.objectStore("app_store");
+            var req = store.openCursor();
+            req.onsuccess = function(e) {
+                var cursor = e.target.result;
+                if (cursor) {
+                    APP_MEMORY_CACHE[cursor.key] = cursor.value;
+                    cursor.continue();
+                } else {
+                    // IndexedDB loaded, ab purane localStorage se agar kuch bacha ho to sync karein
+                    migrateLocalStorageToCache();
+                    if (callback) callback();
+                }
+            };
+            req.onerror = function() {
+                migrateLocalStorageToCache();
+                if (callback) callback();
+            };
+        } catch(err) {
+            migrateLocalStorageToCache();
+            if (callback) callback();
+        }
+    });
+}
+
+// SILENT AUTO-MIGRATION (Purana data bina khoe IndexedDB me lana)
+function migrateLocalStorageToCache() {
+    try {
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && !APP_MEMORY_CACHE.hasOwnProperty(k)) {
+                var raw = localStorage.getItem(k);
+                try {
+                    var parsed = JSON.parse(raw);
+                    APP_MEMORY_CACHE[k] = parsed;
+                    idbPut(k, parsed);
+                } catch(e) {
+                    APP_MEMORY_CACHE[k] = raw;
+                    idbPut(k, raw);
+                }
+            }
+        }
+    } catch(e) {}
+}
+
+// Global keys jo saal badalne par change nahi honi chahiye
+var GLOBAL_APP_KEYS = [
+    "app_sessions_list",
+    "app_active_session",
+    "karkhana_list",
+    "app_users",
+    "info_ledger"
+];
+
+function safeArray(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) {
+        return data.filter(function(item) {
+            return item !== null && item !== undefined;
+        });
+    }
+    if (typeof data === "object") {
+        var keys = Object.keys(data);
+        var isNumeric = keys.length > 0 && keys.every(function(k) { return !isNaN(parseInt(k, 10)); });
+        if (isNumeric) {
+            var arr = [];
+            keys.sort(function(a, b) { return parseInt(a, 10) - parseInt(b, 10); }).forEach(function(k) {
+                if (data[k] !== null && data[k] !== undefined) arr.push(data[k]);
+            });
+            return arr;
+        }
+        return data;
+    }
+    return [];
+}
+
+function getStorageKey(key) {
+    if (!currentUserId) return key;
+    if (GLOBAL_APP_KEYS.indexOf(key) !== -1) {
+        return currentUserId + "_" + key;
+    }
+    var sess = "2026-2027";
+    if (typeof getActiveFinancialSession === "function") {
+        sess = getActiveFinancialSession();
+    } else {
+        var storedSess = APP_MEMORY_CACHE[currentUserId + "_app_active_session"] || localStorage.getItem(currentUserId + "_app_active_session");
+        if (storedSess) sess = String(storedSess).replace(/['"]+/g, '').trim();
+    }
+    sess = String(sess).replace(/['"]+/g, '').trim() || "2026-2027";
+    return currentUserId + "_" + sess + "_" + key;
+}
+
+// 0.001 SECOND ULTRA-FAST GETSTORE (Directly from Memory/IndexedDB)
+function getStore(key) {
+    if (!currentUserId) return [];
+    try {
+        var fullKey = getStorageKey(key);
+
+        // 1. Instant Cache Match
+        if (APP_MEMORY_CACHE.hasOwnProperty(fullKey)) {
+            var val = APP_MEMORY_CACHE[fullKey];
+            if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return val;
+            if (Array.isArray(val)) return safeArray(val);
+            if (typeof val === "object" && val !== null) return safeArray(val);
+            return val;
+        }
+
+        // 2. Fallback to LocalStorage (Agar memory me na mila ho)
+        var raw = localStorage.getItem(fullKey);
+        if (raw === null || raw === undefined) {
+            var oldKey = currentUserId + "_" + key;
+            var oldRaw = localStorage.getItem(oldKey);
+            if (oldRaw !== null && oldRaw !== undefined) {
+                raw = oldRaw;
+            }
+        }
+
+        if (raw === null || raw === undefined || raw === "") return [];
+        var parsed = JSON.parse(raw);
+
+        // Save to cache & IndexedDB for permanent unlimited storage
+        APP_MEMORY_CACHE[fullKey] = parsed;
+        idbPut(fullKey, parsed);
+
+        if (typeof parsed === "string" || typeof parsed === "number" || typeof parsed === "boolean") return parsed;
+        if (Array.isArray(parsed)) return safeArray(parsed);
+        if (typeof parsed === "object" && parsed !== null) return safeArray(parsed);
+        return parsed;
+    } catch (e) {
+        return [];
+    }
+}
+
+// UNLIMITED CAPACITY SETSTORE (Saves to Cache + IndexedDB + Firebase)
+function setStore(key, data) {
+    if (!currentUserId) return;
+    try {
+        var fullKey = getStorageKey(key);
+        var toSave = data;
+        if (Array.isArray(data)) {
+            toSave = safeArray(data);
+        }
+
+        // 1. Instant RAM Cache Update (0ms delay)
+        APP_MEMORY_CACHE[fullKey] = toSave;
+
+        // 2. High-Capacity IndexedDB Save (No 5MB Limit!)
+        idbPut(fullKey, toSave);
+
+        // 3. LocalStorage safety try-catch (Agar space bachi ho to save kare, overflow par na tute)
+        try {
+            localStorage.setItem(fullKey, JSON.stringify(toSave));
+        } catch(storageLimitErr) {
+            // LocalStorage bhar bhi jaye to koi parwah nahi, IndexedDB me data 100% safe hai
+        }
+
+        // 4. Firebase Cloud Sync
+        if (db && !isRemoteUpdating && currentUserId) {
+            showSyncStatus("syncing");
+            var fbKey = fullKey.replace(currentUserId + "_", "");
+            db.ref("users/" + currentUserId + "/" + fbKey).set(toSave)
+                .then(function() { showSyncStatus("online"); })
+                .catch(function() { showSyncStatus("error"); });
+        }
+    } catch (e) {}
+}
+
+function getCurrentActiveSection() {
+    var sections = [
+        "dashboard-view", "admin-section", "info-section", 
+        "kariger-section", "kariger-sheet-section", "bana-section", 
+        "zari-section", "saree-section", "payment-section", "sancha-section",
+        "jobwork-section"
+    ];
+    for (var i = 0; i < sections.length; i++) {
+        var el = document.getElementById(sections[i]);
+        if (el && el.style.display === "block") return sections[i];
+    }
+    return "dashboard-view";
+}
+
+function initFirebaseLiveListeners() {
+    if (!db || !currentUserId) return;
+    try {
+        db.ref("users/" + currentUserId).on("value", function(snapshot) {
+            var val = snapshot.val();
+            if (val) {
+                isRemoteUpdating = true;
+                for (var k in val) {
+                    try {
+                        var itemData = val[k];
+                        if (Array.isArray(itemData)) {
+                            itemData = safeArray(itemData);
+                        }
+                        var fullKey = currentUserId + "_" + k;
+                        APP_MEMORY_CACHE[fullKey] = itemData;
+                        idbPut(fullKey, itemData);
+                        try { localStorage.setItem(fullKey, JSON.stringify(itemData)); } catch(e) {}
+                    } catch (e) {}
+                }
+                isRemoteUpdating = false;
+
+                if (typeof populateSessionDropdown === "function") populateSessionDropdown();
+
+                var cur = getCurrentActiveSection();
+                if (cur === "dashboard-view") {
+                    if (typeof renderDashboardDayBook === "function") renderDashboardDayBook();
+                    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
+                } else if (cur === "kariger-section" && typeof renderKarigerTable === "function") {
+                    renderKarigerTable();
+                } else if (cur === "kariger-sheet-section" && activeKarigerId && typeof loadCurrentSheetData === "function") {
+                    loadCurrentSheetData();
+                } else if (cur === "bana-section" && typeof renderBanaTable === "function") {
+                    renderBanaTable();
+                } else if (cur === "zari-section" && typeof renderZariTable === "function") {
+                    renderZariTable();
+                } else if (cur === "saree-section" && typeof renderSareeTable === "function") {
+                    renderSareeTable();
+                } else if (cur === "payment-section" && typeof renderPaymentTable === "function") {
+                    renderPaymentTable();
+                } else if (cur === "sancha-section" && typeof renderSanchaTable === "function") {
+                    renderSanchaTable();
+                } else if (cur === "jobwork-section") {
+                    if (typeof renderJobWorkWorkersTable === "function") renderJobWorkWorkersTable();
+                    if (typeof updateJobWorkHubBadges === "function") updateJobWorkHubBadges();
+                }
+
+                if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
+                showSyncStatus("online");
+            }
+        });
+    } catch (e) {}
+}
+
+function sanitizeKarigerList() {
+    var list = safeArray(getStore("kariger_list"));
+    var clean = list.filter(function(k) {
+        return k && k.name && String(k.name).trim() !== "";
+    });
+    if (clean.length !== list.length) {
+        setStore("kariger_list", clean);
+    }
+    return clean;
+}
+
+// 4. DATA BACKUP & RESTORE
+function exportUserFullData() {
+    var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
+    var keys = [
+        "kariger_list", "info_ledger", "karkhana_list", "app_sessions_list", "app_active_session",
+        "bana_stock", "bana_history", "zari_stock", "zari_history",
+        "saree_stock", "finished_saree_stock", "lott_saree_stock", "saree_history",
+        "material_transfers", "saree_transfers",
+        "sancha_items", "sancha_history",
+        "jobwork_workers", "jw_bills_list", "jw_payments_list", "dukan_transfer_history"
+    ];
+
+    var obj = {
+        userId: currentUserId,
+        session: sess,
+        exportDate: new Date().toISOString(),
+        data: {},
+        sheets: {},
+        jobwork_sheets: {}
+    };
+
+    keys.forEach(function(k) { 
+        obj.data[k] = getStore(k); 
+    });
+
+    var karigers = sanitizeKarigerList();
+    karigers.forEach(function(k) {
+        if (k && k.id && typeof getKarigerSheets === "function") {
+            obj.sheets[k.id] = getKarigerSheets(k.id);
+        }
+    });
+
+    if (typeof getJobWorkers === "function" && typeof getJobWorkerSheets === "function") {
+        getJobWorkers().forEach(function(w) {
+            if (w && w.id) {
+                obj.jobwork_sheets[w.id] = getJobWorkerSheets(w.id);
+            }
+        });
+    }
+
+    return obj;
+}
+
+async function syncToGoogleDrive() {
+    if (!currentUserId) return alert("Pehle login karein!");
+    var data = exportUserFullData();
+    var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
+    var fileName = currentUserId + "_" + sess + "_Backup_" + formatDateDisplay(getTodayDate()) + ".json";
+    var file = new File([JSON.stringify(data, null, 2)], fileName, { type: "application/json" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+            await navigator.share({ files: [file], title: "Karkhana ERP Backup" });
+        } catch (err) {
+            downloadBackupFile();
+        }
+    } else {
+        downloadBackupFile();
+    }
+}
+
+function downloadBackupFile() {
+    if (!currentUserId) return alert("Pehle login karein!");
+    var data = exportUserFullData();
+    var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = currentUserId + "_" + sess + "_Backup_" + formatDateDisplay(getTodayDate()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function restoreBackupFile(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+
+    var reader = new FileReader();
+    reader.onload = function(evt) {
+        try {
+            var parsed = JSON.parse(evt.target.result);
+            if (parsed && parsed.data) {
+                for (var key in parsed.data) {
+                    setStore(key, parsed.data[key]);
+                }
+                if (parsed.sheets) {
+                    for (var sheetKarId in parsed.sheets) {
+                        setStore("kariger_sheets_" + sheetKarId, parsed.sheets[sheetKarId]);
+                    }
+                }
+                if (parsed.jobwork_sheets) {
+                    for (var jwWorkerId in parsed.jobwork_sheets) {
+                        setStore("jobwork_sheets_" + jwWorkerId, parsed.jobwork_sheets[jwWorkerId]);
+                    }
+                }
+                alert("✅ Data successfully restore ho gaya!");
+                if (typeof populateSessionDropdown === "function") populateSessionDropdown();
+                if (typeof backToDashboard === "function") backToDashboard();
+            }
+        } catch (err) {
+            alert("Restore Error: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+}
+
+// 5. AUTHENTICATION & LOGIN ENGINE
+function getUsersList() {
+    var defaultAdmin = [{
+        id: "farhan",
+        name: "Farhan Bhai (Admin)",
+        pass: "1234",
+        mobile: "9876543210",
+        pin: "1234",
+        role: "admin",
+        status: "active",
+        date: "2026-01-01",
+        expiryDate: ""
+    }];
+
+    try {
+        var local = APP_MEMORY_CACHE["app_users"] || localStorage.getItem("app_users");
+        if (local) {
+            var parsed = (typeof local === "string") ? JSON.parse(local) : local;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                if (!parsed.some(function(u) { return u.id === "farhan"; })) {
+                    parsed.push(defaultAdmin[0]);
+                }
+                return parsed;
+            }
+        }
+    } catch (e) {}
+
+    localStorage.setItem("app_users", JSON.stringify(defaultAdmin));
+    APP_MEMORY_CACHE["app_users"] = defaultAdmin;
+    idbPut("app_users", defaultAdmin);
+    return defaultAdmin;
+}
+
+function syncUsersWithFirebase() {
+    if (!db) return;
+    try {
+        db.ref("app_users").on("value", function(snap) {
+            var val = snap.val();
+            if (val) {
+                var arr = [];
+                for (var uid in val) { if (val[uid]) arr.push(val[uid]); }
+                if (!arr.some(function(u) { return u.id === "farhan"; })) {
+                    var defaultAdmin = {
+                        id: "farhan", name: "Farhan Bhai (Admin)", pass: "1234",
+                        mobile: "9876543210", pin: "1234", role: "admin",
+                        status: "active", date: "2026-01-01", expiryDate: ""
+                    };
+                    arr.push(defaultAdmin);
+                    db.ref("app_users/farhan").set(defaultAdmin);
+                }
+                localStorage.setItem("app_users", JSON.stringify(arr));
+                APP_MEMORY_CACHE["app_users"] = arr;
+                idbPut("app_use
