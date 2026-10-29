@@ -1944,7 +1944,7 @@ function renderJwMovementDaybook() {
                     "<td><strong>" + r.worker + "</strong></td>" +
                     "<td>" + r.sheet + "</td>" +
                     "<td>" + r.itemsDetail + "</td>" +
-                    "<td style='text-align:center;'><strong style='color:#dc2626;'>-" + r.gayi + " Pcs</strong></td>" +
+                    "<td style='text-align:center;'>" + (r.gayi > 0 ? ("<strong style='color:#dc2626;'>-" + r.gayi + " Pcs</strong>") : "-") + "</td>" +
                     "<td style='text-align:center;'><strong style='color:#059669;'>+" + r.aayi + " Pcs</strong></td>" +
                     "<td>" + (r.damagePcs > 0 ? ("<strong style='color:#ea580c;'>⚠️ " + r.damagePcs + " Pcs</strong> (-₹" + r.damageAmt + ")") : "-") + "</td>" +
                 "</tr>";
