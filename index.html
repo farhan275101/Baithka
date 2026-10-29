@@ -253,22 +253,18 @@
                     </div>
                 </div>
 
-                <!-- DYNAMIC SANCHA KARKHANA TABS -->
                 <div id="sancha-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:12px; overflow-x:auto;"></div>
 
-                <!-- SANCHA OPENING STOCK BOX -->
                 <div id="sancha-opening-box" class="summary-box" style="margin-bottom:14px; background:#f0f9ff; border:1px solid #bae6fd; border-left:5px solid #0284c7; text-align:left; padding:12px 16px;">
                     <span style="color:#0284c7; font-weight:800; font-size:12px;">📦 OPENING SANCHA STOCK:</span>
                     <h3 id="sancha-opening-val" style="color:#0284c7; font-size:20px; margin:4px 0;">0.00</h3>
                     <small id="sancha-opening-note" style="color:#64748b; font-weight:600; font-size:11px;">Pichle Session ki 31 March Closing se</small>
                 </div>
 
-                <!-- SANCHA SEARCH BAR -->
                 <div class="filter-panel" style="margin-bottom:14px;">
                     <input type="text" id="search-sancha-input" class="search-box" placeholder="🔍 Search Sancha Item, Name, Date..." oninput="filterSancha()">
                 </div>
 
-                <!-- SANCHA FORM -->
                 <div id="add-sancha-item-form" class="custom-form">
                     <input type="hidden" id="sancha-edit-id">
                     
@@ -711,7 +707,7 @@
                 <div class="table-responsive">
                     <table>
                         <thead>
-                            <tr style="background:#ea580c;"><th>Date</th><th>Zari Name</th><th>Kul Aayi</th><th>Khapat / Gaya</th><th>Bachi Stock</th><th style="text-align:center;">Passbook</th></tr>
+                            <tr style="background:#ea580c;"><th>Date</th><th>Zari Name</th><th>Kul Aayi</th><th>Khapat / Gayi</th><th>Bachi Stock</th><th style="text-align:center;">Passbook</th></tr>
                         </thead>
                         <tbody id="zari-table-body"></tbody>
                     </table>
@@ -1471,7 +1467,7 @@
         </div>
     </div>
 
-    <!-- MODAL 9: YEAR-END CLOSING & NEW SESSION MODAL -->
+    <!-- MODAL 9: YEAR-END CLOSING INPUT MODAL -->
     <div id="session-closing-modal" class="modal-overlay">
         <div class="modal-card" style="max-width:520px;">
             <div class="modal-header" style="background:#7c3aed; color:white;">
@@ -1498,16 +1494,119 @@
                     <input type="text" id="session-new-input" placeholder="Jaise: 2027-2028" style="font-weight:bold; font-size:15px; border-color:#c4b5fd;">
                 </div>
 
-                <button class="btn" style="background:#7c3aed; margin-top:10px;" onclick="executeYearEndClosingProcess()">🚀 Close Session & Start New Year</button>
+                <button class="btn" style="background:#7c3aed; margin-top:10px;" onclick="startSequentialYearClosing()">🚀 Start Step-by-Step Closing</button>
             </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT SCRIPTS (Auto-Bust Cache v34) -->
-    <script src="auth.js?v=34"></script>
-    <script src="kariger.js?v=34"></script>
-    <script src="stock.js?v=34"></script>
-    <script src="jobwork.js?v=34"></script>
-    <script src="daybook.js?v=34"></script>
+    <!-- 🎬 MODAL 10: STEP-BY-STEP SEQUENTIAL TRANSFER & WELCOME MODAL -->
+    <div id="session-transfer-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:600px; padding:25px; border-radius:18px; box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            
+            <div id="transfer-progress-view">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <span style="font-size:32px;">🎬</span>
+                    <h3 style="color:#1e3a8a; font-weight:900; font-size:20px; margin-top:4px;">SIMPLICITY YEAR-END DATA TRANSFER</h3>
+                    <p style="color:#64748b; font-size:12px; margin-top:2px;">Bari-Bari Har Module Ka Data Naye Saal Me Surakshit Transfer Ho Raha Hai</p>
+                </div>
+
+                <!-- OVERALL MAIN PROGRESS BAR -->
+                <div style="background:#e2e8f0; border-radius:12px; height:12px; overflow:hidden; margin-bottom:20px;">
+                    <div id="transfer-main-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #2563eb, #10b981); transition:width 0.2s ease;"></div>
+                </div>
+
+                <!-- 5 STAGES CHECKLIST -->
+                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+                    
+                    <!-- STAGE 1 -->
+                    <div id="stage-card-1" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">1. 🧵 Kariger Master & Tani Khata</strong>
+                            <span id="stage-badge-1" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-1" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-1" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 2 -->
+                    <div id="stage-card-2" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">2. 🥻 Saree Stock (Sabhi Godam)</strong>
+                            <span id="stage-badge-2" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-2" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-2" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 3 -->
+                    <div id="stage-card-3" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">3. 🧶 Bana & ✨ Zari Stock Freeze</strong>
+                            <span id="stage-badge-3" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-3" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-3" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 4 -->
+                    <div id="stage-card-4" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">4. ⚙️ Sancha & ✂️ Job Work Accounts</strong>
+                            <span id="stage-badge-4" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-4" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-4" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 5 -->
+                    <div id="stage-card-5" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">5. 🔒 Final Cloud & Session Safe Lock</strong>
+                            <span id="stage-badge-5" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-5" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-5" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 🎉 CELEBRATION & WELCOME MESSAGE VIEW (SHOWN ONLY AT 100% COMPLETION) -->
+            <div id="transfer-welcome-view" style="display:none; text-align:center; padding:15px 10px;">
+                <div style="font-size:55px; margin-bottom:10px;">🎉 ✨ 🚀</div>
+                <h2 style="color:#059669; font-weight:900; font-size:24px; margin-bottom:6px;">MUBARAK HO! TRANSFER SAFAL RAHA!</h2>
+                <div style="display:inline-block; background:#ecfdf5; border:1px solid #a7f3d0; color:#059669; padding:4px 14px; border-radius:20px; font-weight:800; font-size:13px; margin-bottom:16px;">
+                    📅 Naya Saal: <span id="welcome-session-name">-</span>
+                </div>
+                
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; text-align:left; font-size:13px; color:#334155; line-height:1.8; margin-bottom:20px;">
+                    <div style="color:#059669; font-weight:700;">✔️ Sabhi Karigaron Ka Baki Bakaya Tani 1 Opening Ban Gaya!</div>
+                    <div style="color:#059669; font-weight:700;">✔️ Sabhi Godamo Ka Bacha Saree, Bana & Zari Opening Stock Freeze Ho Gaya!</div>
+                    <div style="color:#0284c7; font-weight:700;">✔️ Pichla Saal Hamesha Ke Liye Surakshit (Locked) Ho Chuka Hai!</div>
+                    <div style="color:#7c3aed; font-weight:700;">✔️ Naye Saal Me ERP Bilkul Halka, Fresh Aur Superfast Khul Chuka Hai!</div>
+                </div>
+
+                <button class="btn" style="background:linear-gradient(135deg, #059669, #10b981); padding:14px; font-size:16px; font-weight:800; box-shadow:0 8px 20px rgba(5,150,105,0.3);" onclick="finishSessionTransferAndEnter()">🚀 Naye Saal Ka Karobar Shuru Karein</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT SCRIPTS (Auto-Bust Cache v35) -->
+    <script src="auth.js?v=35"></script>
+    <script src="kariger.js?v=35"></script>
+    <script src="stock.js?v=35"></script>
+    <script src="jobwork.js?v=35"></script>
+    <script src="daybook.js?v=35"></script>
 </body>
 </html>
