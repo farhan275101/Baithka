@@ -1,18 +1,18 @@
 /* ========================================================
-   SIMPLICITY ERP - KARIGER MASTER, MULTI-KARKHANA & SESSION ENGINE
+   SIMPLICITY ERP - KARIGER MASTER, MULTI-KARKHANA & SEQUENTIAL CLOSING
    File 2 of 5 • Developed by Farhan Jawed
-   (Enterprise Pagination Engine, Fast Render, Wastage & Tagada System)
+   (Sequential 5-Step Year-End Download, 10-10 Chunking & Welcome Celebration)
 ======================================================== */
 
 var activeKarigerId = null;
 var activeSheetIndex = 0;
 var currentKarigerKarkhanaFilter = "all"; // "all" ya specific karkhanaId
 
-// 🎯 ULTRA-FAST PAGINATION ENGINE (50 Karigers Per Page Mobile Optimization)
+// 🎯 ULTRA-FAST PAGINATION ENGINE (50 Karigers Per Page)
 var currentKarigerPage = 1;
 var karigerPageSize = 50;
 
-// ================= 1. 📅 FINANCIAL YEAR SESSION SYSTEM (1 APRIL CLOSING) =================
+// ================= 1. 📅 FINANCIAL YEAR SESSION SYSTEM (SEQUENTIAL CLOSING) =================
 
 function getAppSessions() {
     var userKey = (currentUserId || "app") + "_app_sessions_list";
@@ -109,7 +109,27 @@ function closeSessionClosingModal() {
     setDisplay("session-closing-modal", "none");
 }
 
-function executeYearEndClosingProcess() {
+// ================= 🎬 5-STEP BARI-BARI DOWNLOAD & CLOSING ENGINE =================
+
+var pendingTransferNewSession = null;
+var stage1_oldKarigers = [];
+var stage1_newKarigerSheetsMap = {};
+var stage1_idx = 0;
+var stage1_chunkSize = 10; // ⚡ 10-10 Kariger Ka Smooth Tukda!
+
+var stage2_newSareeStock = [];
+var stage2_newFinStock = [];
+var stage2_newLottStock = [];
+
+var stage3_newBanaStock = [];
+var stage3_newZariStock = [];
+
+var stage4_newSanchaItems = [];
+var stage4_oldJwWorkers = [];
+var stage4_newJwSheetsMap = {};
+var stage4_pendingBills = [];
+
+function startSequentialYearClosing() {
     var curSess = getActiveFinancialSession();
     var newSessEl = document.getElementById("session-new-input");
     var newSess = (newSessEl ? newSessEl.value : "").trim();
@@ -122,29 +142,66 @@ function executeYearEndClosingProcess() {
         return alert("Ye Session '" + newSess + "' pehle se bana hua hai! Upar dropdown se switch karein.");
     }
 
-    if (!confirm("⚠️ KYA AAP 1 APRIL / YEAR-END CLOSING KARNA CHAHTE HAIN?\n\n" +
-        "• Purana saal (" + curSess + ") hamesha ke liye सुरक्षित (Locked) rahega.\n" +
-        "• Sabhi Godamo (Main + Branch) ka bacha stock unhi ke Opening me jayega.\n" +
-        "• Karigaron ki closing naye saal me Tani 1 Opening hisab ban jayegi.\n" +
-        "• Naye saal me app bilkul halka aur fresh khulega!\n" +
-        "• Aap jab chahein upar session dropdown se purane saal me jakar purana hisab dekh sakte hain.")) {
-        return;
+    closeSessionClosingModal();
+    pendingTransferNewSession = newSess;
+
+    // Setup Progress Window
+    setDisplay("session-transfer-modal", "flex");
+    setDisplay("transfer-progress-view", "block");
+    setDisplay("transfer-welcome-view", "none");
+
+    // Reset All 5 Stage Bars & Badges
+    for (var i = 1; i <= 5; i++) {
+        var bar = document.getElementById("stage-bar-" + i);
+        var badge = document.getElementById("stage-badge-" + i);
+        var status = document.getElementById("stage-status-" + i);
+        if (bar) bar.style.width = "0%";
+        if (badge) {
+            badge.textContent = "⏸️ Waiting";
+            badge.style.background = "#e2e8f0";
+            badge.style.color = "#64748b";
+        }
+        if (status) status.textContent = "Wait kar raha hai...";
+    }
+    var mainBar = document.getElementById("transfer-main-bar");
+    if (mainBar) mainBar.style.width = "0%";
+
+    // Start Step 1 Smoothly
+    setTimeout(function() {
+        runStage1_Karigers(curSess, newSess);
+    }, 150);
+}
+
+// --- STAGE 1: 🧵 KARIGER KHATA (10-10 KARKE) ---
+function runStage1_Karigers(curSess, newSess) {
+    stage1_oldKarigers = safeArray(getStore("kariger_list"));
+    stage1_newKarigerSheetsMap = {};
+    stage1_idx = 0;
+
+    var badge = document.getElementById("stage-badge-1");
+    if (badge) {
+        badge.textContent = "⏳ Downloading...";
+        badge.style.background = "#eff6ff";
+        badge.style.color = "#2563eb";
     }
 
-    var karkhanas = getKarkhanas();
+    processNextKarigerChunk(curSess, newSess);
+}
 
-    var oldKarigers = safeArray(getStore("kariger_list"));
-    var newKarigerSheetsMap = {};
+function processNextKarigerChunk(curSess, newSess) {
+    var total = stage1_oldKarigers.length;
+    var end = Math.min(stage1_idx + stage1_chunkSize, total);
 
-    oldKarigers.forEach(function(k) {
-        if (!k || !k.id) return;
+    for (var i = stage1_idx; i < end; i++) {
+        var k = stage1_oldKarigers[i];
+        if (!k || !k.id) continue;
         var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : [];
         var lastSheet = sheets.length ? sheets[sheets.length - 1] : null;
         var calc = (lastSheet && typeof calculateSheetTotals === "function")
             ? calculateSheetTotals(lastSheet)
             : { remainingBana: 0, remainingZari: 0, remainingAmt: 0 };
 
-        newKarigerSheetsMap[k.id] = [{
+        stage1_newKarigerSheetsMap[k.id] = [{
             id: "tani_1",
             title: "Tani 1 (Opening " + newSess + ")",
             pichlaBana: Number((calc.remainingBana || 0).toFixed(2)),
@@ -158,22 +215,66 @@ function executeYearEndClosingProcess() {
             note: "📦 31st March (" + curSess + ") Closing se Aaya Opening Balance",
             rows: []
         }];
-    });
+    }
 
+    stage1_idx = end;
+
+    var pct = total > 0 ? Math.floor((stage1_idx / total) * 100) : 100;
+    var bar1 = document.getElementById("stage-bar-1");
+    var status1 = document.getElementById("stage-status-1");
+    var mainBar = document.getElementById("transfer-main-bar");
+
+    if (bar1) bar1.style.width = pct + "%";
+    if (status1) status1.textContent = "⏳ Downloading: " + stage1_idx + " / " + total + " Kariger (" + pct + "%)";
+    if (mainBar) mainBar.style.width = Math.floor(pct * 0.4) + "%"; // Stage 1 covers up to 40%
+
+    if (stage1_idx < total) {
+        setTimeout(function() {
+            processNextKarigerChunk(curSess, newSess);
+        }, 15);
+    } else {
+        var badge1 = document.getElementById("stage-badge-1");
+        if (badge1) {
+            badge1.textContent = "✅ Done (" + total + ")";
+            badge1.style.background = "#ecfdf5";
+            badge1.style.color = "#059669";
+        }
+        if (status1) status1.textContent = "✅ Sabhi " + total + " Karigaron Ka Hisab Naye Saal Me Transfer Ho Gaya!";
+        
+        // Stage 1 Done ➔ Move to Stage 2
+        setTimeout(function() {
+            runStage2_SareeStock(curSess, newSess);
+        }, 200);
+    }
+}
+
+// --- STAGE 2: 🥻 SAREE STOCK TRANSFER ---
+function runStage2_SareeStock(curSess, newSess) {
+    var badge2 = document.getElementById("stage-badge-2");
+    var bar2 = document.getElementById("stage-bar-2");
+    var status2 = document.getElementById("stage-status-2");
+    var mainBar = document.getElementById("transfer-main-bar");
+
+    if (badge2) {
+        badge2.textContent = "⏳ Processing...";
+        badge2.style.background = "#eff6ff";
+        badge2.style.color = "#2563eb";
+    }
+    if (bar2) bar2.style.width = "40%";
+    if (status2) status2.textContent = "🥻 Main Godam & Branch Godam Saree Pack Ho Rahi Hai...";
+
+    var karkhanas = getKarkhanas();
     var allSarees = safeArray(getStore("saree_stock"));
-    var newSareeStock = [];
+    stage2_newSareeStock = [];
 
     karkhanas.forEach(function(k) {
         var kPcs = 0;
         allSarees.forEach(function(s) {
             var matchK = (String(s.karkhanaId) === String(k.id)) || (!s.karkhanaId && k.isDefault);
-            if (matchK) {
-                kPcs += (Number(s.pcs) || 0);
-            }
+            if (matchK) kPcs += (Number(s.pcs) || 0);
         });
-
         if (kPcs > 0) {
-            newSareeStock.push({
+            stage2_newSareeStock.push({
                 id: "saree_open_" + k.id + "_" + Date.now(),
                 date: getTodayDate(),
                 name: "Fresh Saree Opening Stock",
@@ -190,9 +291,9 @@ function executeYearEndClosingProcess() {
 
     var finTotalPcs = 0;
     safeArray(getStore("finished_saree_stock")).forEach(function(f) { finTotalPcs += (Number(f.pcs) || 0); });
-    var newFinStock = [];
+    stage2_newFinStock = [];
     if (finTotalPcs > 0) {
-        newFinStock.push({
+        stage2_newFinStock.push({
             id: "fin_open_" + Date.now(),
             date: getTodayDate(),
             name: "Calender Finished Saree",
@@ -204,7 +305,7 @@ function executeYearEndClosingProcess() {
     }
 
     var allLott = safeArray(getStore("lott_saree_stock"));
-    var newLottStock = [];
+    stage2_newLottStock = [];
     karkhanas.forEach(function(k) {
         var lPcs = 0;
         allLott.forEach(function(l) {
@@ -212,7 +313,7 @@ function executeYearEndClosingProcess() {
             if (matchL) lPcs += (Number(l.pcs) || 0);
         });
         if (lPcs > 0) {
-            newLottStock.push({
+            stage2_newLottStock.push({
                 id: "lott_open_" + k.id + "_" + Date.now(),
                 date: getTodayDate(),
                 name: "Damage Saree Opening Stock",
@@ -226,7 +327,40 @@ function executeYearEndClosingProcess() {
         }
     });
 
-    var newBanaStock = [];
+    setTimeout(function() {
+        if (bar2) bar2.style.width = "100%";
+        if (badge2) {
+            badge2.textContent = "✅ Done";
+            badge2.style.background = "#ecfdf5";
+            badge2.style.color = "#059669";
+        }
+        if (status2) status2.textContent = "✅ Fresh, Finished Aur Lott Saree Opening Stock Lock Ho Gaya!";
+        if (mainBar) mainBar.style.width = "55%";
+
+        // Stage 2 Done ➔ Move to Stage 3
+        setTimeout(function() {
+            runStage3_BanaZariStock(curSess, newSess);
+        }, 200);
+    }, 150);
+}
+
+// --- STAGE 3: 🧶 BANA & ✨ ZARI STOCK FREEZE ---
+function runStage3_BanaZariStock(curSess, newSess) {
+    var badge3 = document.getElementById("stage-badge-3");
+    var bar3 = document.getElementById("stage-bar-3");
+    var status3 = document.getElementById("stage-status-3");
+    var mainBar = document.getElementById("transfer-main-bar");
+
+    if (badge3) {
+        badge3.textContent = "⏳ Freezing...";
+        badge3.style.background = "#eff6ff";
+        badge3.style.color = "#2563eb";
+    }
+    if (bar3) bar3.style.width = "40%";
+    if (status3) status3.textContent = "🧶 Bana & ✨ Zari Ka Godam Stock Freeze Ho Raha Hai...";
+
+    var karkhanas = getKarkhanas();
+    stage3_newBanaStock = [];
     var banaItems = safeArray(getStore("bana_stock"));
     var uniqueBanaNames = [];
     banaItems.forEach(function(b) {
@@ -245,7 +379,7 @@ function executeYearEndClosingProcess() {
                 try { bachaQty = getBanaItemStats(displayName, k.id).bacha; } catch(e) {}
             }
             if (bachaQty > 0) {
-                newBanaStock.push({
+                stage3_newBanaStock.push({
                     id: Date.now() + Math.random(),
                     name: displayName,
                     date: getTodayDate(),
@@ -262,7 +396,7 @@ function executeYearEndClosingProcess() {
         });
     });
 
-    var newZariStock = [];
+    stage3_newZariStock = [];
     var zariItems = safeArray(getStore("zari_stock"));
     var uniqueZariNames = [];
     zariItems.forEach(function(z) {
@@ -281,7 +415,7 @@ function executeYearEndClosingProcess() {
                 try { bachaQty = getZariItemStats(displayName, k.id).bacha; } catch(e) {}
             }
             if (bachaQty > 0) {
-                newZariStock.push({
+                stage3_newZariStock.push({
                     id: Date.now() + Math.random(),
                     name: displayName,
                     date: getTodayDate(),
@@ -298,8 +432,41 @@ function executeYearEndClosingProcess() {
         });
     });
 
+    setTimeout(function() {
+        if (bar3) bar3.style.width = "100%";
+        if (badge3) {
+            badge3.textContent = "✅ Done";
+            badge3.style.background = "#ecfdf5";
+            badge3.style.color = "#059669";
+        }
+        if (status3) status3.textContent = "✅ Bana Aur Zari Ka Opening Stock Hamesha Ke Liye Freeze!";
+        if (mainBar) mainBar.style.width = "72%";
+
+        // Stage 3 Done ➔ Move to Stage 4
+        setTimeout(function() {
+            runStage4_SanchaJobwork(curSess, newSess);
+        }, 200);
+    }, 150);
+}
+
+// --- STAGE 4: ⚙️ SANCHA & ✂️ JOB WORK ACCOUNTS ---
+function runStage4_SanchaJobwork(curSess, newSess) {
+    var badge4 = document.getElementById("stage-badge-4");
+    var bar4 = document.getElementById("stage-bar-4");
+    var status4 = document.getElementById("stage-status-4");
+    var mainBar = document.getElementById("transfer-main-bar");
+
+    if (badge4) {
+        badge4.textContent = "⏳ Processing...";
+        badge4.style.background = "#eff6ff";
+        badge4.style.color = "#2563eb";
+    }
+    if (bar4) bar4.style.width = "40%";
+    if (status4) status4.textContent = "⚙️ Sancha & ✂️ Job Work Accounts Transfer Ho Rahe Hain...";
+
+    var karkhanas = getKarkhanas();
     var sanchaItems = safeArray(getStore("sancha_items"));
-    var newSanchaItems = [];
+    stage4_newSanchaItems = [];
     sanchaItems.forEach(function(item) {
         if (!item || !item.name) return;
         karkhanas.forEach(function(k) {
@@ -311,7 +478,7 @@ function executeYearEndClosingProcess() {
             }
 
             if (bachaQty > 0) {
-                newSanchaItems.push({
+                stage4_newSanchaItems.push({
                     id: (item.id || "sancha_" + Date.now()) + "_" + k.id,
                     name: item.name,
                     person: item.person || "-",
@@ -327,9 +494,9 @@ function executeYearEndClosingProcess() {
         });
     });
 
-    var oldJwWorkers = safeArray(getStore("jobwork_workers"));
-    var newJwSheetsMap = {};
-    oldJwWorkers.forEach(function(w) {
+    stage4_oldJwWorkers = safeArray(getStore("jobwork_workers"));
+    stage4_newJwSheetsMap = {};
+    stage4_oldJwWorkers.forEach(function(w) {
         if (!w || !w.id) return;
         var sheets = (typeof getJobWorkerSheets === "function") ? getJobWorkerSheets(w.id) : [];
         var lastSh = sheets.length ? sheets[sheets.length - 1] : null;
@@ -337,7 +504,7 @@ function executeYearEndClosingProcess() {
             ? calculateJobWorkSheetTotals(lastSh)
             : { pendingSaree: 0 };
 
-        newJwSheetsMap[w.id] = [{
+        stage4_newJwSheetsMap[w.id] = [{
             id: "jw_sh_" + Date.now() + "_" + w.id,
             title: "Month 1 (Opening " + newSess + ")",
             closingPendingSaree: calc.pendingSaree || 0,
@@ -347,35 +514,71 @@ function executeYearEndClosingProcess() {
         }];
     });
 
-    var pendingBills = safeArray(getStore("jw_bills_list")).filter(function(b) {
+    stage4_pendingBills = safeArray(getStore("jw_bills_list")).filter(function(b) {
         var baki = Math.max(0, (Number(b.billAmt) || 0) - (Number(b.paidAmt) || 0));
         return baki > 0;
     }).map(function(b) {
         return Object.assign({}, b, { note: (b.note || "") + " (Opening Bill from " + curSess + ")" });
     });
 
-    sessions.push(newSess);
+    setTimeout(function() {
+        if (bar4) bar4.style.width = "100%";
+        if (badge4) {
+            badge4.textContent = "✅ Done";
+            badge4.style.background = "#ecfdf5";
+            badge4.style.color = "#059669";
+        }
+        if (status4) status4.textContent = "✅ Sancha & Job Work Accounts Naye Saal Me Tayyar!";
+        if (mainBar) mainBar.style.width = "88%";
+
+        // Stage 4 Done ➔ Move to Stage 5
+        setTimeout(function() {
+            runStage5_AtomicLock(curSess, newSess);
+        }, 200);
+    }, 150);
+}
+
+// --- STAGE 5: 🔒 FINAL SAFE CLOUD & DATABASE LOCK ---
+function runStage5_AtomicLock(curSess, newSess) {
+    var badge5 = document.getElementById("stage-badge-5");
+    var bar5 = document.getElementById("stage-bar-5");
+    var status5 = document.getElementById("stage-status-5");
+    var mainBar = document.getElementById("transfer-main-bar");
+
+    if (badge5) {
+        badge5.textContent = "🔒 Locking...";
+        badge5.style.background = "#eff6ff";
+        badge5.style.color = "#2563eb";
+    }
+    if (bar5) bar5.style.width = "50%";
+    if (status5) status5.textContent = "🔒 Naye Session Ka Data Secure Write Ho Raha Hai...";
+
+    // Final Atomic Update (New session key activated only at this final moment!)
+    var sessions = getAppSessions();
+    if (sessions.indexOf(newSess) === -1) sessions.push(newSess);
+
     localStorage.setItem((currentUserId || "app") + "_app_sessions_list", JSON.stringify(sessions));
     localStorage.setItem((currentUserId || "app") + "_app_active_session", newSess);
     setStore("app_sessions_list", sessions);
     setStore("app_active_session", newSess);
 
-    setStore("kariger_list", oldKarigers);
-    for (var kId in newKarigerSheetsMap) {
-        setStore("kariger_sheets_" + kId, newKarigerSheetsMap[kId]);
+    // Save all new records into the active new year store
+    setStore("kariger_list", stage1_oldKarigers);
+    for (var kId in stage1_newKarigerSheetsMap) {
+        setStore("kariger_sheets_" + kId, stage1_newKarigerSheetsMap[kId]);
     }
-    setStore("saree_stock", newSareeStock);
-    setStore("finished_saree_stock", newFinStock);
-    setStore("lott_saree_stock", newLottStock);
-    setStore("bana_stock", newBanaStock);
-    setStore("zari_stock", newZariStock);
-    setStore("sancha_items", newSanchaItems);
+    setStore("saree_stock", stage2_newSareeStock);
+    setStore("finished_saree_stock", stage2_newFinStock);
+    setStore("lott_saree_stock", stage2_newLottStock);
+    setStore("bana_stock", stage3_newBanaStock);
+    setStore("zari_stock", stage3_newZariStock);
+    setStore("sancha_items", stage4_newSanchaItems);
     setStore("sancha_history", []);
-    setStore("jobwork_workers", oldJwWorkers);
-    for (var wId in newJwSheetsMap) {
-        setStore("jobwork_sheets_" + wId, newJwSheetsMap[wId]);
+    setStore("jobwork_workers", stage4_oldJwWorkers);
+    for (var wId in stage4_newJwSheetsMap) {
+        setStore("jobwork_sheets_" + wId, stage4_newJwSheetsMap[wId]);
     }
-    setStore("jw_bills_list", pendingBills);
+    setStore("jw_bills_list", stage4_pendingBills);
     setStore("jw_payments_list", []);
     setStore("saree_history", []);
     setStore("bana_history", []);
@@ -384,7 +587,29 @@ function executeYearEndClosingProcess() {
     setStore("saree_transfers", []);
     setStore("dukan_transfer_history", []);
 
-    closeSessionClosingModal();
+    setTimeout(function() {
+        if (bar5) bar5.style.width = "100%";
+        if (badge5) {
+            badge5.textContent = "✅ Done";
+            badge5.style.background = "#ecfdf5";
+            badge5.style.color = "#059669";
+        }
+        if (status5) status5.textContent = "✅ Naya Saal Safalta-purvak Surakshit Ho Chuka Hai!";
+        if (mainBar) mainBar.style.width = "100%";
+
+        // 🎉 TRIGGER CELEBRATION WELCOME CARD
+        setTimeout(function() {
+            setDisplay("transfer-progress-view", "none");
+            setDisplay("transfer-welcome-view", "block");
+            var welSess = document.getElementById("welcome-session-name");
+            if (welSess) welSess.textContent = newSess;
+        }, 350);
+
+    }, 250);
+}
+
+function finishSessionTransferAndEnter() {
+    setDisplay("session-transfer-modal", "none");
     populateSessionDropdown();
 
     if (typeof backToDashboard === "function") backToDashboard();
@@ -393,11 +618,6 @@ function executeYearEndClosingProcess() {
     if (typeof renderStockKarkhanaTabs === "function") renderStockKarkhanaTabs();
     if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
     if (typeof renderDashboardDayBook === "function") renderDashboardDayBook();
-
-    alert("🎉 MUBARAK HO! 1 April Year-End Closing safalta-purvak poori hui!\n\n" +
-          "• Pichla saal (" + curSess + ") hamesha ke liye safe ho gaya hai.\n" +
-          "• Sabhi Godamo (Main + Branch) ka bacha stock unhi ke Opening me live ho gaya hai!\n" +
-          "• Karigar hisab aur stock bilkul fresh aur opening balance ke sath tayyar hai.");
 }
 
 // ================= 2. DYNAMIC KARKHANA MASTER =================
