@@ -435,7 +435,6 @@ function renderBanaTable(flist) {
         if (!b) return;
         var matchK = isMain ? (!b.karkhanaId || b.karkhanaId === "k_main") : (String(b.karkhanaId) === String(currentBanaKarkhanaFilter));
         if (matchK && (b.isOpening || (b.note && b.note.indexOf("Opening") !== -1))) {
-            // Nayi kharid aane par bhi openingAaya freeze rehta hai
             var openVal = Number(b.openingAaya !== undefined ? b.openingAaya : b.aaya) || 0;
             totOpenBana += openVal;
         }
@@ -476,7 +475,7 @@ function renderBanaTable(flist) {
     }
 
     var htmlBuffer = "";
-    uniqueBanaNames.forEach(function(nameLower, idx) {
+    uniqueBanaNames.forEach(function(nameLower) {
         var origItem = allBana.find(function(x) { return x && x.name && x.name.trim().toLowerCase() === nameLower; });
         var displayName = origItem ? origItem.name : nameLower.toUpperCase();
         var st = getBanaItemStats(displayName, currentBanaKarkhanaFilter);
@@ -772,7 +771,7 @@ function renderZariTable(flist) {
     }
 
     var htmlBuffer = "";
-    uniqueZariNames.forEach(function(nameLower, idx) {
+    uniqueZariNames.forEach(function(nameLower) {
         var origItem = allZari.find(function(x) { return x && x.name && x.name.trim().toLowerCase() === nameLower; });
         var displayName = origItem ? origItem.name : nameLower.toUpperCase();
         var st = getZariItemStats(displayName, currentZariKarkhanaFilter);
@@ -2348,7 +2347,7 @@ function renderSanchaHistoryTable() {
             "<td><span class='" + (isAaya ? "badge-green" : "badge-red") + "'>" + e.type + "</span></td>" +
             "<td><strong>" + Number(e.qty).toFixed(2) + "</strong></td>" +
             "<td>" + (e.note || "-") + "</td>" +
-            "<td style='text-align:center;'>" + actionCol + "</td>" +
+            "<td style='text-align:center;'><button class='delete-btn' onclick='deleteSanchaHistoryRowDirectly(\"" + e.id + "\")'>🗑️</button></td>" +
         "</tr>";
     });
 
