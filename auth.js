@@ -1,7 +1,7 @@
 /* ========================================================
-   SIMPLICITY ERP - FIREBASE, INDEXEDDB (NO 5MB LIMIT), AUTH & ADMIN ENGINE
+   SIMPLICITY ERP - FIREBASE, INDEXEDDB (NO 5MB LIMIT), AUTH & BACKUP ENGINE
    File 1 of 5 • Developed by Farhan Jawed
-   (Enterprise Storage Engine: IndexedDB + In-Memory RAM Cache + Gmail/Drive Sync)
+   (Enterprise Storage Engine: IndexedDB + In-Memory RAM Cache + One-Tap Drive/Gmail Sync)
 ======================================================== */
 
 // 1. FIREBASE CONFIGURATION & INITIALIZATION
@@ -186,6 +186,7 @@ function migrateLocalStorageToCache() {
     } catch(e) {}
 }
 
+// Global keys jo saal badalne par change nahi honi chahiye
 var GLOBAL_APP_KEYS = [
     "app_sessions_list",
     "app_active_session",
@@ -232,11 +233,13 @@ function getStorageKey(key) {
     return currentUserId + "_" + sess + "_" + key;
 }
 
+// 0.001 SECOND ULTRA-FAST GETSTORE (Directly from Memory/IndexedDB)
 function getStore(key) {
     if (!currentUserId) return [];
     try {
         var fullKey = getStorageKey(key);
 
+        // 1. Instant Cache Match
         if (APP_MEMORY_CACHE.hasOwnProperty(fullKey)) {
             var val = APP_MEMORY_CACHE[fullKey];
             if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return val;
@@ -245,6 +248,7 @@ function getStore(key) {
             return val;
         }
 
+        // 2. Fallback to LocalStorage
         var raw = localStorage.getItem(fullKey);
         if (raw === null || raw === undefined) {
             var oldKey = currentUserId + "_" + key;
@@ -269,6 +273,7 @@ function getStore(key) {
     }
 }
 
+// UNLIMITED CAPACITY SETSTORE (Saves to Cache + IndexedDB + Firebase)
 function setStore(key, data) {
     if (!currentUserId) return;
     try {
@@ -278,13 +283,18 @@ function setStore(key, data) {
             toSave = safeArray(data);
         }
 
+        // 1. Instant RAM Cache Update (0ms delay)
         APP_MEMORY_CACHE[fullKey] = toSave;
+
+        // 2. High-Capacity IndexedDB Save (No 5MB Limit!)
         idbPut(fullKey, toSave);
 
+        // 3. LocalStorage safety try-catch
         try {
             localStorage.setItem(fullKey, JSON.stringify(toSave));
         } catch(storageLimitErr) {}
 
+        // 4. Firebase Cloud Sync
         if (db && !isRemoteUpdating && currentUserId) {
             showSyncStatus("syncing");
             var fbKey = fullKey.replace(currentUserId + "_", "");
@@ -373,7 +383,7 @@ function sanitizeKarigerList() {
     return clean;
 }
 
-// 4. DATA BACKUP & GMAIL / GOOGLE DRIVE NATIVE SYNC
+// 4. DATA BACKUP & RESTORE (TAREEQA 2: ONE-TAP GOOGLE DRIVE / GMAIL SHARE)
 function exportUserFullData() {
     var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
     var keys = [
@@ -416,34 +426,26 @@ function exportUserFullData() {
     return obj;
 }
 
-// 🎯 NATIVE GMAIL & GOOGLE DRIVE BACKUP SYNC (ZERO VERIFICATION REQUIRED)
 async function syncToGoogleDrive() {
     if (!currentUserId) return alert("Pehle login karein!");
-    
     var data = exportUserFullData();
     var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
-    var todayStr = formatDateDisplay(getTodayDate());
-    var fileName = currentUserId + "_" + sess + "_Backup_" + todayStr + ".json";
+    var fileName = currentUserId + "_" + sess + "_Backup_" + formatDateDisplay(getTodayDate()) + ".json";
     var file = new File([JSON.stringify(data, null, 2)], fileName, { type: "application/json" });
 
-    // Mobile Phone (Android & iOS) Native Share Intent
+    // Tareeqa 2: Phone par Google Drive ("Save to Drive") aur Gmail popup khulega
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
         try {
-            await navigator.share({
-                files: [file],
-                title: "Simplicity ERP Backup - " + todayStr,
-                text: "Karkhana ERP Backup (" + currentUserId + " • " + sess + "). Ise apne Gmail ya Google Drive me surakshit save karein."
+            await navigator.share({ 
+                files: [file], 
+                title: "Simplicity ERP Backup",
+                text: "Simplicity ERP Backup File (" + sess + " • " + formatDateDisplay(getTodayDate()) + ")"
             });
         } catch (err) {
-            // Agar user ne cancel kiya ya error aayi to computer download trigger karein
-            if (err.name !== "AbortError") {
-                downloadBackupFile();
-            }
+            downloadBackupFile();
         }
     } else {
-        // Computer / Desktop Fallback
         downloadBackupFile();
-        alert("✅ Backup file computer me download ho gayi hai!\n\nIse apne personal Gmail ya Google Drive me upload karke safe rakh lein.");
     }
 }
 
@@ -458,6 +460,7 @@ function downloadBackupFile() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    alert("📥 Backup file download ho gayi hai! Ise apne Gmail ya Google Drive par safe rakh lein.");
 }
 
 function restoreBackupFile(e) {
