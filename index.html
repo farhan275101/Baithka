@@ -66,7 +66,7 @@
         <div class="card" id="forgot-box" style="display:none;">
             <h2>Password Reset</h2>
             <div><span class="creator-tag">by Farhan Jawed</span></div>
-            <p class="card-subtitle">Apne 4-Digit Security PIN Se Password Reset Karein</p>
+            <p class="card-subtitle">Apne 4-Digit Secret PIN Se Password Reset Karein</p>
             <div id="forgot-step-1">
                 <div class="input-group"><label>User ID ya Mobile</label><input type="text" id="forgot-query" placeholder="User ID ya Mobile number"></div>
                 <div class="input-group">
@@ -121,7 +121,7 @@
                 </div>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <span id="cloud-status-badge" class="sync-badge">🟢 Cloud Synced</span>
-                    <!-- ☁️ POLISHED GMAIL / GOOGLE DRIVE BACKUP BUTTON -->
+                    <!-- ☁️ DIRECT GMAIL / DRIVE BACKUP BUTTON -->
                     <button class="add-btn" style="padding:7px 14px; font-size:12px; font-weight:800; background:linear-gradient(135deg, #0284c7, #2563eb); box-shadow:0 2px 8px rgba(37,99,235,0.25);" onclick="syncToGoogleDrive()">☁️ Gmail / Drive Backup</button>
                     <button class="add-btn" style="padding:7px 14px; font-size:12px; font-weight:700; background:#475569;" onclick="document.getElementById('banner-restore-input').click()">📥 Restore</button>
                     <input type="file" id="banner-restore-input" style="display:none;" accept=".json" onchange="restoreBackupFile(event)">
@@ -371,7 +371,7 @@
                 </div>
             </div>
 
-            <!-- MODULE: KARIGER MASTER -->
+            <!-- MODULE: KARIGER MASTER (CLEAN - NO TEST BUTTONS) -->
             <div id="kariger-section" class="module-section">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
@@ -813,7 +813,7 @@
                 <!-- VIEW 1: JOB WORK MAIN HUB -->
                 <div id="jw-hub-view">
                     <div class="module-header">
-                        <button class="back-btn" onclick="showJobWorkHub()">← Wapas Hub</button>
+                        <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
                         <h2 style="color:#0d9488; font-size:19px; font-weight:700;">🧵 Job Work & Finishing Hub</h2>
                         <div></div>
                     </div>
