@@ -1,7 +1,7 @@
 /* ========================================================
    SIMPLICITY ERP - KARIGER MASTER, MULTI-KARKHANA & SEQUENTIAL CLOSING
    File 2 of 5 • Developed by Farhan Jawed
-   (100% Freeze-Proof 5-Step Sequential Engine & Celebration Welcome)
+   (10-10 Sequential Engine, Session Delete with ID/Password & Welcome Celebration)
 ======================================================== */
 
 var activeKarigerId = null;
@@ -102,11 +102,137 @@ function openSessionClosingModal() {
     var newInp = document.getElementById("session-new-input");
     if (newInp) newInp.value = nextYear;
 
+    populateDeleteSessionDropdown();
+
+    var uInp = document.getElementById("session-del-user-id");
+    var pInp = document.getElementById("session-del-password");
+    if (uInp) uInp.value = "";
+    if (pInp) pInp.value = "";
+
     setDisplay("session-closing-modal", "flex");
 }
 
 function closeSessionClosingModal() {
     setDisplay("session-closing-modal", "none");
+}
+
+function populateDeleteSessionDropdown() {
+    var delSel = document.getElementById("session-delete-select");
+    if (!delSel) return;
+    delSel.innerHTML = "";
+
+    var sessions = getAppSessions();
+    if (sessions.length <= 1) {
+        delSel.innerHTML = "<option value=''>Sirf 1 hi session hai (Delete nahi ho sakta)</option>";
+        return;
+    }
+
+    sessions.forEach(function(s) {
+        var opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = "🗑️ " + s;
+        delSel.appendChild(opt);
+    });
+}
+
+// 🔒 STRICT ID & PASSWORD PROTECTED SESSION DELETE FUNCTION
+function confirmAndDeleteSessionWithAuth() {
+    var delSel = document.getElementById("session-delete-select");
+    var targetSess = delSel ? delSel.value : "";
+
+    if (!targetSess) return alert("Pehle delete karne ke liye session chunein!");
+
+    var sessions = getAppSessions();
+    if (sessions.length <= 1) {
+        return alert("⚠️ Kam se kam 1 Financial Session hona zaroori hai! Aakhiri session delete nahi kiya ja sakta.");
+    }
+
+    var uIdInp = (document.getElementById("session-del-user-id").value || "").trim().toLowerCase();
+    var passInp = (document.getElementById("session-del-password").value || "").trim();
+
+    if (!uIdInp || !passInp) {
+        return alert("⚠️ Suraksha ke liye apna User ID aur Password dono bharein!");
+    }
+
+    // Verify against current logged-in user credentials
+    var users = (typeof getUsersList === "function") ? getUsersList() : [];
+    var currentUser = users.find(function(u) {
+        return u && String(u.id).toLowerCase() === String(currentUserId).toLowerCase();
+    });
+
+    if (!currentUser) {
+        return alert("User verify nahi ho paya! Kripya dobara login karein.");
+    }
+
+    var matchId = (String(currentUser.id).toLowerCase() === uIdInp) || (String(currentUser.mobile).trim() === uIdInp);
+    var matchPass = (String(currentUser.pass) === passInp);
+
+    if (!matchId || !matchPass) {
+        return alert("⛔ GALAT USER ID YA PASSWORD!\nSuraksha ki wajah se Session delete karne ki permission nahi di gayi.");
+    }
+
+    if (!confirm("⚠️ FINAL WARNING:\nKya aap sach me Session '" + targetSess + "' ko hamesha ke liye delete karna chahte hain?\nIska sara fasa hua ya aadha-adhura data mit jayega!")) {
+        return;
+    }
+
+    // 1. Remove from session list
+    var updatedSessions = sessions.filter(function(s) { return s !== targetSess; });
+    var fallbackSess = updatedSessions[updatedSessions.length - 1] || "2026-2027";
+
+    localStorage.setItem((currentUserId || "app") + "_app_sessions_list", JSON.stringify(updatedSessions));
+    setStore("app_sessions_list", updatedSessions);
+
+    // 2. Wipe all storage keys belonging to this session
+    var prefix = currentUserId + "_" + targetSess + "_";
+    try {
+        var toDeleteLocal = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf(prefix) === 0) toDeleteLocal.push(k);
+        }
+        toDeleteLocal.forEach(function(k) { localStorage.removeItem(k); });
+
+        if (typeof APP_MEMORY_CACHE === "object") {
+            for (var memKey in APP_MEMORY_CACHE) {
+                if (memKey.indexOf(prefix) === 0) delete APP_MEMORY_CACHE[memKey];
+            }
+        }
+
+        // Delete from Firebase
+        if (db && currentUserId) {
+            db.ref("users/" + currentUserId).once("value", function(snap) {
+                var val = snap.val();
+                if (val) {
+                    var fbUpdates = {};
+                    var targetPrefix = targetSess + "_";
+                    for (var fbKey in val) {
+                        if (fbKey.indexOf(targetPrefix) === 0) {
+                            fbUpdates[fbKey] = null;
+                        }
+                    }
+                    if (Object.keys(fbUpdates).length > 0) {
+                        db.ref("users/" + currentUserId).update(fbUpdates);
+                    }
+                }
+            });
+        }
+    } catch(err) {}
+
+    // 3. Switch active session to the remaining valid session
+    localStorage.setItem((currentUserId || "app") + "_app_active_session", fallbackSess);
+    setStore("app_active_session", fallbackSess);
+
+    closeSessionClosingModal();
+    populateSessionDropdown();
+
+    if (typeof backToDashboard === "function") backToDashboard();
+    if (typeof renderKarigerKarkhanaTabs === "function") renderKarigerKarkhanaTabs();
+    if (typeof renderKarigerTable === "function") renderKarigerTable();
+    if (typeof renderStockKarkhanaTabs === "function") renderStockKarkhanaTabs();
+    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
+    if (typeof renderDashboardDayBook === "function") renderDashboardDayBook();
+
+    alert("✅ SUCCESS: Fasa hua Session '" + targetSess + "' safalta-purvak delete ho gaya!\nAb aap surakshit hokar '" + fallbackSess + "' me hain.");
 }
 
 // ================= 🎬 5-STEP SEQUENTIAL CHUNKED ENGINE =================
@@ -115,7 +241,7 @@ var pendingTransferNewSession = null;
 var stage1_oldKarigers = [];
 var stage1_newKarigerSheetsMap = {};
 var stage1_idx = 0;
-var stage1_chunkSize = 10; // 10-10 Kariger Chunk
+var stage1_chunkSize = 10; // ⚡ 10-10 Kariger Chunk!
 
 var stage2_newSareeStock = [];
 var stage2_newFinStock = [];
@@ -131,7 +257,7 @@ var stage4_pendingBills = [];
 
 var stage5_keys = [];
 var stage5_idx = 0;
-var stage5_chunkSize = 25; // ⚡ Step 5 me bhi 25-25 karke save hoga! Zero Freeze!
+var stage5_chunkSize = 10; // ⚡ Step 5 me bhi bilkul 10-10 kariger save hoga!
 
 function startSequentialYearClosing() {
     var curSess = getActiveFinancialSession();
@@ -143,7 +269,7 @@ function startSequentialYearClosing() {
 
     var sessions = getAppSessions();
     if (sessions.indexOf(newSess) !== -1) {
-        return alert("Ye Session '" + newSess + "' pehle se bana hua hai! Upar dropdown se switch karein.");
+        return alert("Ye Session '" + newSess + "' pehle se bana hua hai! Agar ye kharab hai to niche 'Delete Zone' se ise delete karein.");
     }
 
     closeSessionClosingModal();
@@ -535,7 +661,7 @@ function runStage4_SanchaJobwork(curSess, newSess) {
     }, 150);
 }
 
-// --- STAGE 5: 🔒 FINAL SAFE CHUNKED SAVE (ZERO FREEZE!) ---
+// --- STAGE 5: 🔒 10-10 CHUNKS FREEZE-PROOF SAVE (ZERO LAG ENGINE) ---
 function runStage5_AtomicLock(curSess, newSess) {
     var badge5 = document.getElementById("stage-badge-5");
     var bar5 = document.getElementById("stage-bar-5");
@@ -546,10 +672,15 @@ function runStage5_AtomicLock(curSess, newSess) {
         badge5.style.background = "#eff6ff";
         badge5.style.color = "#2563eb";
     }
-    if (bar5) bar5.style.width = "10%";
+    if (bar5) bar5.style.width = "5%";
     if (status5) status5.textContent = "🔒 Session & Master Stock Save Ho Raha Hai...";
 
-    // 1. Session keys update
+    // ⚡ Mute network socket during bulk writes to prevent computer hang
+    if (typeof isRemoteUpdating !== "undefined") {
+        isRemoteUpdating = true;
+    }
+
+    // 1. Session key activate karein
     var sessions = getAppSessions();
     if (sessions.indexOf(newSess) === -1) sessions.push(newSess);
 
@@ -580,7 +711,7 @@ function runStage5_AtomicLock(curSess, newSess) {
     setStore("saree_transfers", []);
     setStore("dukan_transfer_history", []);
 
-    // 3. Ab 2,000 sheets ko 25-25 ke tukdon me save karein! (NO FREEZE)
+    // 3. 2,000 sheets ko bilkul 10-10 ke tukdon me save karein!
     stage5_keys = Object.keys(stage1_newKarigerSheetsMap);
     stage5_idx = 0;
 
@@ -612,9 +743,14 @@ function processNextSaveChunk(newSess) {
     if (stage5_idx < total) {
         setTimeout(function() {
             processNextSaveChunk(newSess);
-        }, 15);
+        }, 20); // ⚡ 20ms pause between 10 items keeps computer cool and responsive!
     } else {
-        // 🎉 100% COMPLETE!
+        // Unmute remote updating
+        if (typeof isRemoteUpdating !== "undefined") {
+            isRemoteUpdating = false;
+        }
+
+        // Complete!
         var badge5 = document.getElementById("stage-badge-5");
         if (badge5) {
             badge5.textContent = "✅ Done";
@@ -624,7 +760,7 @@ function processNextSaveChunk(newSess) {
         if (status5) status5.textContent = "✅ Naya Saal Safalta-purvak Surakshit Ho Chuka Hai!";
         if (mainBar) mainBar.style.width = "100%";
 
-        // WELCOME SCREEN SHOW
+        // 🎉 WELCOME SCREEN SHOW
         setTimeout(function() {
             setDisplay("transfer-progress-view", "none");
             setDisplay("transfer-welcome-view", "block");
