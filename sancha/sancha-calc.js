@@ -1,113 +1,61 @@
 /* ========================================================
-   SIMPLICITY ERP - ZARI STOCK CALCULATION ENGINE (FIXED)
-   File: zari/zari-calc.js • Developed by Farhan Jawed
+   SIMPLICITY ERP - SANCHA (LOOM TANI) CALCULATION ENGINE
+   File: sancha/sancha-calc.js • Developed by Farhan Jawed
+   (Sancha Par Tani Bani, Kariger Loom Par Le Gaya & Bachi Tani)
 ======================================================== */
 
-var currentZariKarkhanaFilter = "k_main";
+var currentSanchaKarkhanaFilter = "k_main";
 
-function getZariItemStats(itemName, targetKarkhanaId) {
-    var kId = targetKarkhanaId || currentZariKarkhanaFilter || "k_main";
-    var isMain = (kId === "k_main");
-    var nameLower = (itemName || "").trim().toLowerCase();
+function getSanchaItems() {
+    return safeArray(getStore("sancha_items"));
+}
 
-    var totalAaya = 0;
-    var totalGaya = 0;
-    var lastDate = "";
+function saveSanchaItems(list) {
+    setStore("sancha_items", safeArray(list));
+}
 
-    var zStock = safeArray(getStore("zari_stock"));
-    var transfers = safeArray(getStore("material_transfers")).filter(function(t) { 
-        return t && t.type === "zari"; 
-    });
-    var allKarigers = (typeof sanitizeKarigerList === "function") ? sanitizeKarigerList() : [];
+// LIVE TANI STOCK STATS (KITNI TANI BANI - KITNI KARIGER LE GAYA = KITNI TANI BACHI)
+function getSanchaItemStats(itemId, itemName, targetKarkhanaId) {
+    var kId = targetKarkhanaId || currentSanchaKarkhanaFilter || "k_main";
+    var items = getSanchaItems();
+    var hist = safeArray(getStore("sancha_history"));
 
-    var uniqueInGodown = [];
-    zStock.forEach(function(z) {
-        if (!z || !z.name) return;
-        var matchK = isMain ? (!z.karkhanaId || z.karkhanaId === "k_main") : (String(z.karkhanaId) === String(kId));
-        var nL = z.name.trim().toLowerCase();
-        if (matchK && uniqueInGodown.indexOf(nL) === -1) uniqueInGodown.push(nL);
+    var targetItem = items.find(function(s) {
+        return (itemId && String(s.id) === String(itemId)) || 
+               (!itemId && s.name && s.name.trim().toLowerCase() === (itemName || "").trim().toLowerCase());
     });
 
-    if (isMain) {
-        // 1. Opening + Kharid
-        zStock.forEach(function(z) {
-            var matchK = (!z.karkhanaId || z.karkhanaId === "k_main");
-            if (z && matchK && z.name && z.name.trim().toLowerCase() === nameLower) {
-                totalAaya += (Number(z.aaya) || 0);
-                if (z.date) lastDate = z.date;
+    var totalTaniBani = targetItem ? (Number(targetItem.totalQty) || 0) : 0;
+    var karigerLeGaya = 0;
+    var wapasAayi = 0;
+
+    hist.forEach(function(h) {
+        if (!h) return;
+        var matchItem = (targetItem && String(h.itemId) === String(targetItem.id)) || 
+                        (itemName && h.name && h.name.toLowerCase() === itemName.toLowerCase());
+        var matchK = (!h.karkhanaId && kId === "k_main") || (String(h.karkhanaId) === String(kId));
+
+        if (matchItem && matchK) {
+            var q = Number(h.qty) || 0;
+            var t = String(h.type || "");
+
+            if (t.indexOf("Le Gaya") !== -1 || t.indexOf("Out") !== -1 || t.indexOf("Diya") !== -1) {
+                karigerLeGaya += q;
+            } else if (t.indexOf("Wapas") !== -1 || t.indexOf("Jama") !== -1 || t.indexOf("Bani") !== -1 || t.indexOf("In") !== -1) {
+                wapasAayi += q;
             }
-        });
+        }
+    });
 
-        // 2. Branch Transfer Out
-        transfers.forEach(function(t) {
-            if (t && t.itemName && t.itemName.trim().toLowerCase() === nameLower) {
-                totalGaya += (Number(t.qty) || 0);
-                if (t.date) lastDate = t.date;
-            }
-        });
-
-        // 3. Kariger Khapat (Net Zari Minus Engine)
-        allKarigers.forEach(function(k) {
-            var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : [];
-            sheets.forEach(function(sh) {
-                safeArray(sh.rows).forEach(function(r) {
-                    if (!r) return;
-                    var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
-                    if (rowKarkhana === "k_main") {
-                        var rName = (r.zariItemName || "").trim().toLowerCase();
-                        var isMatch = (rName === nameLower) || (!rName && (uniqueInGodown.length <= 1 || uniqueInGodown[0] === nameLower));
-                        if (isMatch) {
-                            totalGaya += (Number(r.netZari) || 0);
-                            totalAaya += (Number(r.retZari) || 0);
-                            if (r.date) lastDate = r.date;
-                        }
-                    }
-                });
-            });
-        });
-    } else {
-        // Branch Godown
-        zStock.forEach(function(z) {
-            if (z && String(z.karkhanaId) === String(kId) && z.name && z.name.trim().toLowerCase() === nameLower) {
-                totalAaya += (Number(z.aaya) || 0);
-                if (z.date) lastDate = z.date;
-            }
-        });
-
-        transfers.filter(function(t) { return String(t.toKarkhanaId) === String(kId); }).forEach(function(t) {
-            if (t && t.itemName && t.itemName.trim().toLowerCase() === nameLower) {
-                totalAaya += (Number(t.qty) || 0);
-                if (t.date) lastDate = t.date;
-            }
-        });
-
-        allKarigers.forEach(function(k) {
-            var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : [];
-            sheets.forEach(function(sh) {
-                safeArray(sh.rows).forEach(function(r) {
-                    if (!r) return;
-                    var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
-                    if (String(rowKarkhana) === String(kId)) {
-                        var rName = (r.zariItemName || "").trim().toLowerCase();
-                        var isMatch = (rName === nameLower) || (!rName && (uniqueInGodown.length <= 1 || uniqueInGodown[0] === nameLower));
-                        if (isMatch) {
-                            totalGaya += (Number(r.netZari) || 0);
-                            totalAaya += (Number(r.retZari) || 0);
-                            if (r.date) lastDate = r.date;
-                        }
-                    }
-                });
-            });
-        });
-    }
-
-    var bacha = totalAaya - totalGaya;
+    // Bachi Tani = (Kul Bani Hui Tani) - (Kariger Loom Par Le Gaya)
+    var bachiTani = Math.max(0, (totalTaniBani + wapasAayi) - karigerLeGaya);
 
     return {
-        name: itemName,
-        date: lastDate || getTodayDate(),
-        aaya: Number(totalAaya.toFixed(2)),
-        gaya: Number(totalGaya.toFixed(2)),
-        bacha: Number(bacha.toFixed(2))
+        id: targetItem ? targetItem.id : itemId,
+        name: itemName || (targetItem ? targetItem.name : "-"),
+        totalBani: totalTaniBani,
+        karigerLeGaya: karigerLeGaya,
+        wapasAayi: wapasAayi,
+        bachiTani: bachiTani
     };
 }
