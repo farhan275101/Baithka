@@ -8,6 +8,8 @@
     
     <!-- PWA Web App Manifest -->
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-512.png">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -286,4 +288,1380 @@
                     
                     <div style="background:#e0f2fe; border:1px solid #bae6fd; padding:10px 14px; border-radius:8px; margin-bottom:14px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
                         <strong style="color:#0369a1; font-size:13px;">Item Ka Prakar:</strong>
-                        <label style="cursor:po
+                        <label style="cursor:pointer; font-size:13px; font-weight:700; color:#0284c7;">
+                            <input type="radio" name="sancha-item-type" id="sancha-type-existing" checked onchange="toggleSanchaItemType()"> 🔘 Purane Sancha Me Stock Jodein
+                        </label>
+                        <label style="cursor:pointer; font-size:13px; font-weight:700; color:#047857;">
+                            <input type="radio" name="sancha-item-type" id="sancha-type-new" onchange="toggleSanchaItemType()"> ⚪ Bilkul Naya Sancha Banayein
+                        </label>
+                    </div>
+
+                    <div class="form-row-4">
+                        <div class="input-group"><label>Date</label><input type="date" id="sancha-new-item-date"></div>
+                        
+                        <div class="input-group" id="sancha-existing-group">
+                            <label style="color:#0284c7; font-weight:800;">Purana Sancha Chunein</label>
+                            <select id="sancha-select-existing" style="padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold;"></select>
+                        </div>
+
+                        <div class="input-group" id="sancha-new-group" style="display:none;">
+                            <label style="color:#047857; font-weight:800;">Naya Sancha Naam</label>
+                            <input type="text" id="sancha-new-item-name" placeholder="Jaise: Fancy, Resham">
+                        </div>
+
+                        <div class="input-group" id="sancha-new-person-group" style="display:none;">
+                            <label>Name / Person</label>
+                            <input type="text" id="sancha-new-item-person" placeholder="Naam likhein">
+                        </div>
+
+                        <div class="input-group">
+                            <label style="color:#0284c7; font-weight:800;">Kitna Maal Aaya (Qty)</label>
+                            <input type="number" step="any" id="sancha-new-item-qty" placeholder="0">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="add-btn" style="background:#0284c7;" id="sancha-save-btn" onclick="saveNewSanchaItem()">Save Item</button>
+                        <button class="reset-btn" id="sancha-cancel-btn" style="display:none;" onclick="cancelSanchaEdit()">Cancel</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#0284c7;">
+                                <th>Date</th>
+                                <th>Item Naam</th>
+                                <th>Name</th>
+                                <th>Kul Aaya</th>
+                                <th>Tani Gaya</th>
+                                <th>Bacha Stock</th>
+                                <th style="text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sancha-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MODULE: INFO LEDGER -->
+            <div id="info-section" class="module-section">
+                <div class="module-header">
+                    <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                    <h2 style="color:#4f46e5; font-size:19px; font-weight:700;">📋 Kariger Saree Information Ledger</h2>
+                    <button class="add-btn" style="background:#4f46e5;" onclick="toggleInfoForm()">+ Nayi Detail</button>
+                </div>
+                <div class="filter-panel">
+                    <input type="text" id="search-info-input" class="search-box" placeholder="🔍 Search any column..." oninput="searchInfoLedger()">
+                </div>
+                <div id="add-info-form" class="custom-form">
+                    <input type="hidden" id="info-edit-id">
+                    <div class="form-row-3">
+                        <div class="input-group"><label>Kariger</label><input type="text" id="info-name"></div>
+                        <div class="input-group"><label>Saree</label><input type="text" id="info-saree"></div>
+                        <div class="input-group"><label>Bana</label><input type="text" id="info-bana"></div>
+                    </div>
+                    <div class="form-row-3">
+                        <div class="input-group"><label>Zari</label><input type="text" id="info-zari"></div>
+                        <div class="input-group"><label>Bani (₹)</label><input type="number" id="info-bani" placeholder="240"></div>
+                        <div class="input-group"><label>Address</label><input type="text" id="info-address"></div>
+                    </div>
+                    <div class="form-row-3">
+                        <div class="input-group"><label>Booti</label><input type="text" id="info-booti"></div>
+                        <div class="input-group"><label>Kadi</label><input type="text" id="info-kadi" placeholder="5 Kadi"></div>
+                        <div class="input-group"><label>Dhaga</label><input type="text" id="info-dhaga"></div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="add-btn" style="background:#4f46e5;" id="info-save-btn" onclick="saveInfoLedgerEntry()">Save</button>
+                        <button class="reset-btn" id="info-cancel-btn" style="display:none;" onclick="cancelInfoEdit()">Cancel</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#4f46e5;"><th>S.No.</th><th>Name</th><th>Saree</th><th>Bana</th><th>Zari</th><th>Bani (₹)</th><th>Address</th><th>Booti</th><th>Kadi</th><th>Dhaga</th><th style="text-align:center;">Action</th></tr>
+                        </thead>
+                        <tbody id="info-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MODULE: KARIGER MASTER -->
+            <div id="kariger-section" class="module-section">
+                <div class="module-header">
+                    <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                    <h2 style="color:#0f766e; font-size:19px; font-weight:700;">🧵 Kariger Master List</h2>
+                    <div style="display:flex; gap:8px;">
+                        <button class="add-btn" style="background:#0284c7;" onclick="openKarkhanaManagerModal()">⚙️ Karkhane Manage</button>
+                        <button class="add-btn" style="background:#0f766e;" onclick="toggleKarigerForm()">+ Naya Kariger</button>
+                    </div>
+                </div>
+
+                <div id="kariger-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:14px; overflow-x:auto;"></div>
+                
+                <div class="filter-panel" style="background:#fff7ed; border-color:#fed7aa;">
+                    <input type="text" id="search-kariger-input" class="search-box" placeholder="🔍 Search Kariger, Saree, Karkhana..." oninput="searchKariger()">
+                    
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label style="font-size:12px; font-weight:700; color:#c2410c;">⚠️ Kitne din se nahi aaye?</label>
+                        <select id="kariger-absent-filter" onchange="filterInactiveKarigers()" style="padding:8px 12px; border-radius:6px; border:1px solid #fdba74; font-size:12px; font-weight:700; background:white; color:#9a3412;">
+                            <option value="0">Sabhi Kariger Dekhein</option>
+                            <option value="15">15+ Din se nahi aaye</option>
+                            <option value="20">20+ Din se nahi aaye</option>
+                            <option value="30">30+ Din se nahi aaye</option>
+                            <option value="40">40+ Din se nahi aaye</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="add-kariger-form" class="custom-form">
+                    <input type="hidden" id="kar-edit-id">
+                    <div class="form-row-4">
+                        <div class="input-group">
+                            <label style="color:#0f766e; font-weight:800;">🏭 Karkhana Chunein</label>
+                            <select id="kar-karkhana" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold;"></select>
+                        </div>
+                        <div class="input-group"><label>Kariger Naam</label><input type="text" id="kar-name"></div>
+                        <div class="input-group"><label>Saree Design</label><input type="text" id="kar-saree"></div>
+                        <div class="input-group"><label>Joining Date</label><input type="date" id="kar-date"></div>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="add-btn" style="background:#0f766e;" id="kar-save-btn" onclick="saveNewKariger()">Save Kariger</button>
+                        <button class="reset-btn" id="kar-cancel-btn" style="display:none;" onclick="cancelKarigerEdit()">Cancel</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#0f766e;">
+                                <th>Karkhana</th>
+                                <th>Kariger Naam</th>
+                                <th>Saree Design</th>
+                                <th>Aakhiri Entry</th>
+                                <th>Status / Din</th>
+                                <th style="text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kariger-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MODULE: KARIGER KHATA SHEET -->
+            <div id="kariger-sheet-section" class="module-section">
+                <div class="module-header">
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button class="back-btn" onclick="closeKarigerSheet()">⬅️ Wapas Kariger List</button>
+                        <button class="back-btn" style="background:#475569;" onclick="backToDashboard()">🏠 Dashboard</button>
+                    </div>
+                    <h2 style="color:#1e3a8a; font-size:18px; font-weight:700;">📊 Kariger Khata Sheet</h2>
+                    <div style="display:flex; gap:8px;">
+                        <button class="print-btn" onclick="window.print()">🖨️ Print</button>
+                        <button class="whatsapp-btn" onclick="shareSheetOnWhatsApp()">📲 WhatsApp Bhejo</button>
+                    </div>
+                </div>
+                <div class="ledger-box">
+                    <div class="ledger-top-banner">
+                        <span id="sheet-banner-name">KARIGER KHATA</span>
+                        <span id="sheet-active-badge" style="font-size:12px; background:rgba(255,255,255,0.25); padding:3px 8px; border-radius:4px;">Tani 1</span>
+                    </div>
+                    <div class="sheet-tabs-bar">
+                        <div class="sheet-tabs-list" id="tani-tabs-container"></div>
+                        <button class="add-sheet-btn" onclick="addNewTaniSheet()">➕ Add Tani</button>
+                    </div>
+
+                    <div class="tani-closing-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+                        <div><label>PICHLA BANA:</label><input type="number" step="any" id="tani-bana" value="0" oninput="saveCurrentSheetConfig()"></div>
+                        <div><label>PICHLA ZARI:</label><input type="number" step="any" id="tani-zari" value="0" oninput="saveCurrentSheetConfig()"></div>
+                        <div><label>PICHLA BAKI (₹):</label><input type="number" step="any" id="tani-bani" value="0" oninput="saveCurrentSheetConfig()"></div>
+                        <div><label style="color:#d97706; font-weight:800;">BANA WASTAGE:</label><input type="number" step="any" id="tani-bana-waste" value="0" placeholder="0.00" oninput="saveCurrentSheetConfig()" style="border-color:#f59e0b; font-weight:bold;"></div>
+                        <div><label style="color:#d97706; font-weight:800;">ZARI WASTAGE:</label><input type="number" step="any" id="tani-zari-waste" value="0" placeholder="0.00" oninput="saveCurrentSheetConfig()" style="border-color:#f59e0b; font-weight:bold;"></div>
+                        <div><label>NOTE:</label><input type="text" id="tani-note" oninput="saveCurrentSheetConfig()"></div>
+                    </div>
+                    
+                    <div style="display:flex; gap:12px; background:#f8fafc; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:12px; align-items:center; flex-wrap:wrap; border:1px solid #e2e8f0;">
+                        <strong style="color:#1e3a8a;">⚙️ Manual Rate Set Karein:</strong>
+                        <div>Bana/Saree: <input type="number" step="any" id="rate-bana" style="width:85px; padding:6px; font-weight:bold; border:1px solid #cbd5e1; border-radius:4px;" value="0.311" oninput="saveCurrentSheetConfig()"></div>
+                        <div>Zari/Saree: <input type="number" step="any" id="rate-zari" style="width:85px; padding:6px; font-weight:bold; border:1px solid #cbd5e1; border-radius:4px;" value="0.110" oninput="saveCurrentSheetConfig()"></div>
+                        <div>Bani/Saree: <input type="number" step="any" id="rate-bani" style="width:85px; padding:6px; font-weight:bold; color:#b91c1c; border:1px solid #cbd5e1; border-radius:4px;" value="240" oninput="saveCurrentSheetConfig()"></div>
+                    </div>
+
+                    <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px;">
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#059669;">Bana Item:</label>
+                            <input type="text" id="line-bana-name" list="sheet-bana-dl" oninput="updateLiveStockDisplay()" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; margin-top:3px;">
+                            <datalist id="sheet-bana-dl"></datalist>
+                            <span id="live-bana-stock-badge" style="font-size:11px; font-weight:700; color:#059669; display:block; margin-top:2px;">Bacha: 0.00</span>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#ea580c;">Zari Item:</label>
+                            <input type="text" id="line-zari-name" list="sheet-zari-dl" oninput="updateLiveStockDisplay()" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; margin-top:3px;">
+                            <datalist id="sheet-zari-dl"></datalist>
+                            <span id="live-zari-stock-badge" style="font-size:11px; font-weight:700; color:#ea580c; display:block; margin-top:2px;">Bacha: 0.00</span>
+                        </div>
+                        <div>
+                            <label style="font-size:11px; font-weight:700; color:#0284c7;">Sancha Item:</label>
+                            <input type="text" id="line-sancha-name" list="sheet-sancha-dl" oninput="updateLiveStockDisplay()" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; margin-top:3px;">
+                            <datalist id="sheet-sancha-dl"></datalist>
+                            <span id="live-sancha-stock-badge" style="font-size:11px; font-weight:700; color:#0284c7; display:block; margin-top:2px;">Bacha: 0.00</span>
+                        </div>
+                    </div>
+
+                    <div id="add-line-form" style="background:#f8fafc; border:1px solid #cbd5e1; padding:15px; border-radius:10px; margin-bottom:14px;">
+                        <strong style="font-size:13px; color:#1e3a8a; display:block; margin-bottom:10px;">➕ Nayi Line Entry Jodein:</strong>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <div><label style="font-size:11px; font-weight:700;">DATE</label><input type="date" id="line-date" style="width:100%; padding:7px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div><label style="font-size:11px; font-weight:700; color:#2563eb;">SAREE (Pcs Aayi)</label><input type="number" id="line-saree" placeholder="0" style="width:100%; padding:7px; font-size:12px; font-weight:bold; border:1px solid #93c5fd; border-radius:6px;"></div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <div><label style="font-size:11px; font-weight:700;">SANCHA</label><input type="text" id="line-entry-sancha" list="sheet-sancha-dl" style="width:100%; padding:7px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div><label style="font-size:11px; font-weight:700;">TANI NAME</label><input type="text" id="line-tani-name" placeholder="Tani-1" style="width:100%; padding:7px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                        </div>
+                        <div style="margin-bottom:10px;"><label style="font-size:11px; font-weight:700;">TANI WAZAN (Kg)</label><input type="number" step="any" id="line-tani-wazan" placeholder="0" style="width:100%; padding:7px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; background:#f0fdf4; padding:8px; border-radius:8px;">
+                            <div><label style="font-size:11px; font-weight:700; color:#059669;">BANA CONE</label><input type="number" step="any" id="line-bana-cone" placeholder="0" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div><label style="font-size:11px; font-weight:700; color:#dc2626;">LESS TP</label><input type="number" step="any" id="line-bana-less" placeholder="0" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                        </div>
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; background:#fff7ed; padding:8px; border-radius:8px;">
+                            <div><label style="font-size:11px; font-weight:700; color:#ea580c;">ZARI QTY</label><input type="number" step="any" id="line-zari" placeholder="0" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div><label style="font-size:11px; font-weight:700; color:#dc2626;">TOPI</label><input type="number" step="any" id="line-zari-topi" placeholder="0" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                        </div>
+                        
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <div><label style="font-size:11px; font-weight:700; color:#059669;">PAID (₹ Diya)</label><input type="number" id="line-paid" placeholder="0" style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div><label style="font-size:11px; font-weight:700; color:#dc2626;">LOTT (Damage)</label><input type="number" id="line-lott" placeholder="0" style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+                            <div><label style="font-size:11px; font-weight:700; color:#059669;">RET. BANA (Wapas Aaya)</label><input type="number" step="any" id="line-ret-bana" placeholder="0" style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div><label style="font-size:11px; font-weight:700; color:#ea580c;">RET. ZARI (Wapas Aayi)</label><input type="number" step="any" id="line-ret-zari" placeholder="0" style="width:100%; padding:7px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                        </div>
+                        <button class="add-btn" style="background:#2563eb; width:100%; padding:10px; font-weight:700;" onclick="addSheetLineRow()">+ Line Jodein & Karkhana Stock Adjust Karein</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="sheet-table">
+                            <thead>
+                                <tr style="background:#1e3a8a; color:white;">
+                                    <th>DATE</th><th>SAREE</th><th>SANCHA</th><th>TANI</th><th>WAZAN</th><th>NET BANA</th><th>NET ZARI</th><th>PAID</th><th>LOTT</th><th>RET.B</th><th>RET.Z</th><th>DEL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sheet-rows-body"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td>TOTAL</td><td id="tot-saree">0</td><td>-</td><td>-</td><td id="tot-tani-wazan">0</td><td id="tot-bana-net">0</td><td id="tot-zari-net">0</td><td id="tot-paid">0</td><td id="tot-lott">0</td><td id="tot-ret-bana">0</td><td id="tot-ret-zari">0</td><td>-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="sheet-calculations-grid">
+                        <div class="calc-card" style="border-top:4px solid #8b5cf6;">
+                            <h4>💰 Mazdoori Hisab:</h4>
+                            <div class="calc-row"><span>Total Saree:</span><strong id="calc-tot-saree">0</strong></div>
+                            <div class="calc-row"><span>Lott:</span><strong id="calc-tot-lott">- 0</strong></div>
+                            <div class="calc-row"><span>Net Saree:</span><strong id="calc-net-saree">0</strong></div>
+                            <div class="calc-row"><span>Bani Rate:</span><strong id="calc-bani-rate">₹ 240</strong></div>
+                            <div class="calc-row"><span>Gross Bani:</span><strong id="calc-gross-bani">₹ 0</strong></div>
+                            <div class="calc-row"><span>Last Closing:</span><strong id="calc-last-tani-bani">+ ₹ 0</strong></div>
+                            <div class="calc-row"><span>Paid:</span><strong id="calc-tot-paid">- ₹ 0</strong></div>
+                            <div class="highlight-baki"><div class="calc-row" style="margin:0;"><span>REMAINING:</span><strong id="calc-remaining-amt" style="color:#dc2626; font-size:14px;">₹ 0</strong></div></div>
+                        </div>
+                        <div class="calc-card" style="border-top:4px solid #10b981;">
+                            <h4>🧶 Bana Hisab:</h4>
+                            <div class="calc-row"><span>Closing Last:</span><strong id="calc-last-tani-bana">0</strong></div>
+                            <div class="calc-row"><span>Net Diya:</span><strong id="calc-tot-bana">0</strong></div>
+                            <div class="calc-row"><span>Returning:</span><strong id="calc-ret-bana">- 0</strong></div>
+                            <div class="calc-row"><span>Khapat:</span><strong id="calc-bana-consumption">0</strong></div>
+                            <div class="calc-row"><span style="color:#d97706; font-weight:bold;">Wastage:</span><strong id="calc-bana-wastage" style="color:#d97706;">- 0.00</strong></div>
+                            <div class="highlight-baki" style="border-color:#10b981; background:#ecfdf5;"><div class="calc-row" style="margin:0;"><span>BACHA BANA:</span><strong id="calc-remaining-bana" style="color:#059669; font-size:14px;">0</strong></div></div>
+                        </div>
+                        <div class="calc-card" style="border-top:4px solid #f97316;">
+                            <h4>✨ Zari Hisab:</h4>
+                            <div class="calc-row"><span>Closing Last:</span><strong id="calc-last-tani-zari">0</strong></div>
+                            <div class="calc-row"><span>Net Diya:</span><strong id="calc-tot-zari">0</strong></div>
+                            <div class="calc-row"><span>Returning:</span><strong id="calc-ret-zari">- 0</strong></div>
+                            <div class="calc-row"><span>Khapat:</span><strong id="calc-zari-consumption">0</strong></div>
+                            <div class="calc-row"><span style="color:#d97706; font-weight:bold;">Wastage:</span><strong id="calc-zari-wastage" style="color:#d97706;">- 0.00</strong></div>
+                            <div class="highlight-baki" style="border-color:#f97316; background:#fff7ed;"><div class="calc-row" style="margin:0;"><span>BACHI ZARI:</span><strong id="calc-remaining-zari" style="color:#ea580c; font-size:14px;">0</strong></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODULE: BANA -->
+            <div id="bana-section" class="module-section">
+                <div class="module-header">
+                    <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                    <h2 style="color:#059669; font-size:19px; font-weight:700;">🧶 Bana Stock</h2>
+                    <div style="display:flex; gap:8px;">
+                        <button class="add-btn" style="background:#0284c7;" onclick="openMaterialTransferModal('bana')">🚚 Karkhane Ko Maal Bheja</button>
+                        <button class="add-btn" onclick="toggleBanaForm()">+ Naya Stock (Godam)</button>
+                    </div>
+                </div>
+
+                <div id="bana-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:12px; overflow-x:auto;"></div>
+
+                <div id="bana-opening-box" class="summary-box" style="margin-bottom:14px; background:#ecfdf5; border:1px solid #a7f3d0; border-left:5px solid #059669; text-align:left; padding:12px 16px;">
+                    <span style="color:#059669; font-weight:800; font-size:12px;">📦 OPENING BANA STOCK:</span>
+                    <h3 id="bana-opening-val" style="color:#059669; font-size:20px; margin:4px 0;">0.00 Kg</h3>
+                    <small id="bana-opening-note" style="color:#64748b; font-weight:600; font-size:11px;">Pichle Session ki 31 March Closing se</small>
+                </div>
+
+                <div class="filter-panel">
+                    <div class="filter-date-group">
+                        <label>From:</label><input type="date" id="bana-from-date">
+                        <label>To:</label><input type="date" id="bana-to-date">
+                        <button class="filter-btn" onclick="filterBana()">Filter</button>
+                        <button class="reset-btn" onclick="resetBanaFilter()">Reset</button>
+                    </div>
+                    <input type="text" id="search-bana-input" class="search-box" placeholder="🔍 Search Bana Name..." oninput="filterBana()">
+                </div>
+
+                <div id="add-bana-form" class="custom-form">
+                    <div style="background:#ecfdf5; border:1px solid #a7f3d0; padding:10px 14px; border-radius:8px; margin-bottom:14px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                        <strong style="color:#065f46; font-size:13px;">Item Ka Prakar:</strong>
+                        <label style="cursor:pointer; font-size:13px; font-weight:700; color:#059669;">
+                            <input type="radio" name="bana-item-type" id="bana-type-existing" checked onchange="toggleBanaItemType()"> 🔘 Purane Bana Me Stock Jodein
+                        </label>
+                        <label style="cursor:pointer; font-size:13px; font-weight:700; color:#047857;">
+                            <input type="radio" name="bana-item-type" id="bana-type-new" onchange="toggleBanaItemType()"> ⚪ Bilkul Naya Bana Banayein
+                        </label>
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="input-group"><label>Date</label><input type="date" id="bana-date"></div>
+                        
+                        <div class="input-group" id="bana-existing-group">
+                            <label style="color:#059669; font-weight:800;">Purana Bana Chunein</label>
+                            <select id="bana-select-existing" style="padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold;"></select>
+                        </div>
+
+                        <div class="input-group" id="bana-new-group" style="display:none;">
+                            <label style="color:#047857; font-weight:800;">Naya Bana Naam</label>
+                            <input type="text" id="bana-new-name" placeholder="Naya Bana Name">
+                        </div>
+
+                        <div class="input-group">
+                            <label style="color:#059669; font-weight:800;">Kitna Aaya (Qty in Kg)</label>
+                            <input type="number" step="any" id="bana-aaya" placeholder="0.00">
+                        </div>
+                    </div>
+                    <button class="add-btn" onclick="saveNewBana()">Save Entry</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#059669;"><th>Date</th><th>Bana Name</th><th>Kul Aaya</th><th>Khapat / Gaya</th><th>Bacha Stock</th><th style="text-align:center;">Passbook</th></tr>
+                        </thead>
+                        <tbody id="bana-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MODULE: ZARI -->
+            <div id="zari-section" class="module-section">
+                <div class="module-header">
+                    <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                    <h2 style="color:#ea580c; font-size:19px; font-weight:700;">✨ Zari Stock</h2>
+                    <div style="display:flex; gap:8px;">
+                        <button class="add-btn" style="background:#0284c7;" onclick="openMaterialTransferModal('zari')">🚚 Karkhane Ko Zari Bheji</button>
+                        <button class="add-btn" style="background:#ea580c;" onclick="toggleZariForm()">+ Naya Stock (Godam)</button>
+                    </div>
+                </div>
+
+                <div id="zari-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:12px; overflow-x:auto;"></div>
+
+                <div id="zari-opening-box" class="summary-box" style="margin-bottom:14px; background:#fff7ed; border:1px solid #fed7aa; border-left:5px solid #ea580c; text-align:left; padding:12px 16px;">
+                    <span style="color:#ea580c; font-weight:800; font-size:12px;">📦 OPENING ZARI STOCK:</span>
+                    <h3 id="zari-opening-val" style="color:#ea580c; font-size:20px; margin:4px 0;">0.00 Kg</h3>
+                    <small id="zari-opening-note" style="color:#64748b; font-weight:600; font-size:11px;">Pichle Session ki 31 March Closing se</small>
+                </div>
+
+                <div class="filter-panel">
+                    <div class="filter-date-group">
+                        <label>From:</label><input type="date" id="zari-from-date">
+                        <label>To:</label><input type="date" id="zari-to-date">
+                        <button class="filter-btn" style="background:#ea580c;" onclick="filterZari()">Filter</button>
+                        <button class="reset-btn" onclick="resetZariFilter()">Reset</button>
+                    </div>
+                    <input type="text" id="search-zari-input" class="search-box" placeholder="🔍 Search Zari Name..." oninput="filterZari()">
+                </div>
+
+                <div id="add-zari-form" class="custom-form">
+                    <div style="background:#fff7ed; border:1px solid #fed7aa; padding:10px 14px; border-radius:8px; margin-bottom:14px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+                        <strong style="color:#c2410c; font-size:13px;">Item Ka Prakar:</strong>
+                        <label style="cursor:pointer; font-size:13px; font-weight:700; color:#ea580c;">
+                            <input type="radio" name="zari-item-type" id="zari-type-existing" checked onchange="toggleZariItemType()"> 🔘 Purani Zari Me Stock Jodein
+                        </label>
+                        <label style="cursor:pointer; font-size:13px; font-weight:700; color:#c2410c;">
+                            <input type="radio" name="zari-item-type" id="zari-type-new" onchange="toggleZariItemType()"> ⚪ Bilkul Nayi Zari Banayein
+                        </label>
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="input-group"><label>Date</label><input type="date" id="zari-date"></div>
+                        
+                        <div class="input-group" id="zari-existing-group">
+                            <label style="color:#ea580c; font-weight:800;">Purani Zari Chunein</label>
+                            <select id="zari-select-existing" style="padding:9px; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold;"></select>
+                        </div>
+
+                        <div class="input-group" id="zari-new-group" style="display:none;">
+                            <label style="color:#c2410c; font-weight:800;">Nayi Zari Naam</label>
+                            <input type="text" id="zari-new-name" placeholder="Nayi Zari Name">
+                        </div>
+
+                        <div class="input-group">
+                            <label style="color:#ea580c; font-weight:800;">Kitni Aayi (Qty in Kg)</label>
+                            <input type="number" step="any" id="zari-aaya" placeholder="0.00">
+                        </div>
+                    </div>
+                    <button class="add-btn" style="background:#ea580c;" onclick="saveNewZari()">Save Entry</button>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#ea580c;"><th>Date</th><th>Zari Name</th><th>Kul Aayi</th><th>Khapat / Gaya</th><th>Bachi Stock</th><th style="text-align:center;">Passbook</th></tr>
+                        </thead>
+                        <tbody id="zari-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MODULE: SAREE -->
+            <div id="saree-section" class="module-section">
+                <div class="module-header">
+                    <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                    <h2 style="color:#2563eb; font-size:19px; font-weight:700;">🥻 Saree Stock Management</h2>
+                    <button class="add-btn" style="background:#059669;" onclick="openSareeTransferModal()">🚚 Saree Transfer / Receive</button>
+                </div>
+
+                <div id="saree-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:10px; overflow-x:auto;"></div>
+
+                <div id="saree-opening-box" class="summary-box" style="margin-bottom:14px; background:#eff6ff; border:1px solid #bfdbfe; border-left:5px solid #2563eb; text-align:left; padding:12px 16px;">
+                    <span style="color:#2563eb; font-weight:800; font-size:12px;">📦 OPENING SAREE STOCK:</span>
+                    <h3 id="saree-opening-val" style="color:#2563eb; font-size:20px; margin:4px 0;">0 Pcs</h3>
+                    <small id="saree-opening-note" style="color:#64748b; font-weight:600; font-size:11px;">Pichle Session ki 31 March Closing se</small>
+                </div>
+
+                <div class="sheet-tabs-bar" style="margin-bottom:15px;">
+                    <div class="sheet-tabs-list">
+                        <button class="sheet-tab active" id="btn-saree-tab-fresh" onclick="switchSareeStockTab('fresh')">🥻 Fresh Saree</button>
+                        <button class="sheet-tab" id="btn-saree-tab-finished" onclick="switchSareeStockTab('finished')">✨ Finished Saree (Calender)</button>
+                        <button class="sheet-tab" id="btn-saree-tab-lott" onclick="switchSareeStockTab('lott')">⚠️ Lott / Damage Saree</button>
+                    </div>
+                </div>
+
+                <div class="filter-panel">
+                    <div class="filter-date-group">
+                        <label>From:</label><input type="date" id="saree-from-date">
+                        <label>To:</label><input type="date" id="saree-to-date">
+                        <button class="filter-btn" onclick="filterSaree()">Filter</button>
+                        <button class="reset-btn" onclick="resetSareeFilter()">Reset</button>
+                    </div>
+                    <input type="text" id="search-saree-input" class="search-box" placeholder="🔍 Search Saree, Kariger, Date..." oninput="filterSaree()">
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#2563eb; color:white;">
+                                <th>Date</th><th>S.No.</th><th>Saree Ka Naam</th><th>Kariger</th><th>Fresh Stock (Pcs)</th><th>Out (Bikri)</th><th style="text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="saree-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MODULE: PAYMENT -->
+            <div id="payment-section" class="module-section">
+                <div class="module-header">
+                    <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                    <h2 style="color:#7c3aed; font-size:19px; font-weight:700;">💳 Kariger Payment & Bakaya Hisab</h2>
+                    <button class="add-btn" style="background:#7c3aed;" onclick="renderPaymentTable()">🔄 Refresh Live Hisab</button>
+                </div>
+
+                <div id="payment-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:14px; overflow-x:auto;"></div>
+
+                <div class="summary-bar">
+                    <div class="summary-box" style="border-top:4px solid #059669;">
+                        <span>KUL DIYA GAYA (TOTAL PAID)</span>
+                        <h3 id="total-paid-display" style="color:#059669;">₹ 0</h3>
+                    </div>
+                    <div class="summary-box" style="border-top:4px solid #dc2626;">
+                        <span>KUL BAKAYA (TOTAL BAKI)</span>
+                        <h3 id="total-baki-display" style="color:#dc2626;">₹ 0</h3>
+                    </div>
+                </div>
+                <div class="filter-panel">
+                    <input type="text" id="search-payment-input" class="search-box" placeholder="🔍 Search Kariger, Saree..." oninput="filterPayment()">
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#7c3aed; color:white;">
+                                <th>S.No.</th>
+                                <th>Karkhana</th>
+                                <th>Kariger Ka Naam</th>
+                                <th>Saree Design</th>
+                                <th>Kul Mazdoori</th>
+                                <th>Kul Paid (Diya)</th>
+                                <th>Kul Bakaya (Baki)</th>
+                                <th style="text-align:center;">Quick Action</th>
+                                <th style="text-align:center;">Passbook</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 8. MASTER MODULE: JOB WORK -->
+            <div id="jobwork-section" class="module-section">
+                
+                <!-- VIEW 1: JOB WORK MAIN HUB -->
+                <div id="jw-hub-view">
+                    <div class="module-header">
+                        <button class="back-btn" onclick="backToDashboard()">← Dashboard Wapas</button>
+                        <h2 style="color:#0d9488; font-size:19px; font-weight:700;">🧵 Job Work & Finishing Hub</h2>
+                        <div></div>
+                    </div>
+                    
+                    <div class="menu-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-top:20px;">
+                        <div class="menu-btn" style="border-top:4px solid #e11d48; padding:25px;" onclick="openJobWorkSubSection('cutting')">
+                            <span class="icon" style="font-size:38px;">✂️</span>
+                            <span class="title" style="font-size:15px; font-weight:800;">1. Booti Cutting</span>
+                            <span class="menu-badge" id="jw-hub-badge-cutting" style="background:#ffe4e6; color:#e11d48; border:1px solid #fecdd3; font-size:12px;">0 Kariger</span>
+                        </div>
+                        
+                        <div class="menu-btn" style="border-top:4px solid #0284c7; padding:25px;" onclick="openJobWorkSubSection('calender')">
+                            <span class="icon" style="font-size:38px;">🎛️</span>
+                            <span class="title" style="font-size:15px; font-weight:800;">2. Calender</span>
+                            <span class="menu-badge" id="jw-hub-badge-calender" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; font-size:12px;">0 Kariger</span>
+                        </div>
+                        
+                        <div class="menu-btn" style="border-top:4px solid #059669; padding:25px;" onclick="openJobWorkSubSection('dukan')">
+                            <span class="icon" style="font-size:38px;">🏪</span>
+                            <span class="title" style="font-size:15px; font-weight:800;">3. Dukan Bheja (Final Out)</span>
+                            <span class="menu-badge" id="jw-hub-badge-dukan" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-size:12px;">0 Pcs Bheje</span>
+                        </div>
+
+                        <div class="menu-btn" style="border-top:4px solid #7c3aed; padding:25px;" onclick="openJobWorkSubSection('billing')">
+                            <span class="icon" style="font-size:38px;">💳</span>
+                            <span class="title" style="font-size:15px; font-weight:800;">4. Job Work Bills & Hisab</span>
+                            <span class="menu-badge" id="jw-hub-badge-billing" style="background:#f3e8ff; color:#7c3aed; border:1px solid #d8b4fe; font-size:12px;">Baki: ₹ 0</span>
+                        </div>
+
+                        <div class="menu-btn" style="border-top:4px solid #f59e0b; padding:25px;" onclick="openJobWorkSubSection('movement')">
+                            <span class="icon" style="font-size:38px;">🔄</span>
+                            <span class="title" style="font-size:15px; font-weight:800;">5. Job Work Day-Book & Tracking</span>
+                            <span class="menu-badge" id="jw-hub-badge-movement" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-size:12px;">Live Day-Book</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-bar" style="margin-top:25px; background:#fff1f2; border:1px solid #fecdd3; border-radius:12px; padding:15px;">
+                        <div style="flex:1;">
+                            <span style="color:#e11d48; font-weight:800; font-size:13px;">✂️ BOOTI CUTTING SAREE LIVE REGISTER (MAIN GODOWN):</span>
+                            <div style="display:flex; gap:20px; margin-top:8px; flex-wrap:wrap;">
+                                <div><small style="color:#64748b; font-weight:700;">Cutting Se Tayyar Aayi:</small> <strong id="jw-stat-cut-aayi" style="color:#059669; font-size:16px;">0 Pcs</strong></div>
+                                <div><small style="color:#64748b; font-weight:700;">Calender Me Gayi:</small> <strong id="jw-stat-cut-sent-cal" style="color:#e11d48; font-size:16px;">0 Pcs</strong></div>
+                                <div><small style="color:#64748b; font-weight:700;">Karkhane Me Bachi Cutting Saree:</small> <strong id="jw-stat-cut-bacha" style="color:#0284c7; font-size:16px;">0 Pcs</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: WORKERS LIST VIEW -->
+                <div id="jw-workers-view" style="display:none;">
+                    <div class="module-header">
+                        <button class="back-btn" onclick="showJobWorkHub()">← Wapas Hub</button>
+                        <h2 style="color:#0d9488; font-size:18px; font-weight:700;" id="jw-workers-title">Workers List</h2>
+                        <button class="add-btn" style="background:#0d9488;" onclick="toggleJobWorkerForm()"><span id="jw-add-worker-btn-text">+ Naya Kariger</span></button>
+                    </div>
+
+                    <div class="filter-panel" style="background:#fff7ed; border-color:#fed7aa;">
+                        <input type="text" id="jw-search-worker-input" class="search-box" placeholder="🔍 Search Kariger, Address, Mobile..." oninput="filterJobWorkWorkers()">
+                        
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <label style="font-size:12px; font-weight:700; color:#c2410c;">⚠️ Kitne din se nahi aaye?</label>
+                            <select id="jw-absent-filter" onchange="filterJobWorkWorkers()" style="padding:8px 12px; border-radius:6px; border:1px solid #fdba74; font-size:12px; font-weight:700; background:white; color:#9a3412;">
+                                <option value="0">Sabhi Kariger Dekhein</option>
+                                <option value="15">15+ Din se nahi aaye</option>
+                                <option value="20">20+ Din se nahi aaye</option>
+                                <option value="30">30+ Din se nahi aaye</option>
+                                <option value="40">40+ Din se nahi aaye</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="add-jw-worker-form" class="custom-form">
+                        <input type="hidden" id="jw-worker-edit-id">
+                        <div class="form-row-4">
+                            <div class="input-group"><label>Joining Date</label><input type="date" id="jw-worker-date"></div>
+                            <div class="input-group"><label>Worker Ka Naam</label><input type="text" id="jw-worker-name" placeholder="Kariger naam"></div>
+                            <div class="input-group"><label>Address (Pata)</label><input type="text" id="jw-worker-address" placeholder="Mohalla / Pata"></div>
+                            <div class="input-group"><label>Mobile No.</label><input type="tel" id="jw-worker-mobile" placeholder="10-digit number"></div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="add-btn" style="background:#0d9488;" id="jw-worker-save-btn" onclick="saveNewJobWorker()">Save Kariger</button>
+                            <button class="reset-btn" id="jw-worker-cancel-btn" style="display:none;" onclick="cancelJobWorkerEdit()">Cancel</button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr style="background:#0d9488; color:white;">
+                                    <th>Joining Date</th>
+                                    <th>Worker Ka Naam</th>
+                                    <th>Address</th>
+                                    <th>Mobile No.</th>
+                                    <th>Status / Din</th>
+                                    <th style="text-align:center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jw-workers-table-body"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="summary-bar" style="margin-top:20px;">
+                        <div class="summary-box" style="border-top:4px solid #dc2626; background:#fef2f2; cursor:pointer;" onclick="viewJobWorkSummaryPassbook('gayi')" title="Passbook dekhne ke liye click karein">
+                            <span style="color:#991b1b; font-size:12px; font-weight:700;">🔴 KUL SAREE GAYI (📖 Passbook)</span>
+                            <h3 id="jw-stat-total-gayi" style="color:#dc2626; font-size:24px;">0 Pcs</h3>
+                        </div>
+                        <div class="summary-box" style="border-top:4px solid #059669; background:#ecfdf5; cursor:pointer;" onclick="viewJobWorkSummaryPassbook('aayi')" title="Passbook dekhne ke liye click karein">
+                            <span style="color:#065f46; font-size:12px; font-weight:700;">🟢 KUL SAREE WAPAS AAYI (📖 Passbook)</span>
+                            <h3 id="jw-stat-total-aayi" style="color:#059669; font-size:24px;">0 Pcs</h3>
+                        </div>
+                        <div class="summary-box" style="border-top:4px solid #ea580c; background:#fff7ed; cursor:pointer;" onclick="viewJobWorkSummaryPassbook('damage')" title="Passbook dekhne ke liye click karein">
+                            <span style="color:#c2410c; font-size:12px; font-weight:700;">🟠 KUL SAREE DAMAGE HUI (📖 Passbook)</span>
+                            <h3 id="jw-stat-total-damage" style="color:#ea580c; font-size:24px;">0 Pcs</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: WORKER KHATA SHEET -->
+                <div id="jw-sheet-view" style="display:none;">
+                    <div class="module-header">
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button class="back-btn" onclick="closeJobWorkerSheet()">⬅️ Wapas List</button>
+                            <button class="back-btn" style="background:#475569;" onclick="backToDashboard()">🏠 Dashboard</button>
+                        </div>
+                        <h2 style="color:#0d9488; font-size:18px; font-weight:700;">📊 Kariger Khata Sheet</h2>
+                        <div style="display:flex; gap:8px;">
+                            <button class="print-btn" onclick="window.print()">🖨️ Print</button>
+                            <button class="whatsapp-btn" onclick="shareJobWorkOnWhatsApp()">📲 WhatsApp Bhejo</button>
+                        </div>
+                    </div>
+
+                    <div class="ledger-box">
+                        <div class="ledger-top-banner" style="background:linear-gradient(90deg, #0d9488, #059669);">
+                            <span id="jw-sheet-banner-name">KARIGER KHATA</span>
+                            <span id="jw-sheet-active-badge" style="font-size:12px; background:rgba(255,255,255,0.25); padding:3px 8px; border-radius:4px;">Month 1</span>
+                        </div>
+
+                        <div class="sheet-tabs-bar">
+                            <div class="sheet-tabs-list" id="jw-month-tabs-container"></div>
+                            <button class="add-sheet-btn" style="background:#0d9488;" onclick="addNewJobWorkerMonthlySheet()">➕ Naya Mahina (Add Sheet)</button>
+                        </div>
+
+                        <div class="tani-closing-grid" style="grid-template-columns:1fr 1fr; background:#fff7ed; border-color:#fed7aa; margin-bottom:15px;">
+                            <div>
+                                <label style="color:#c2410c; font-size:11px; font-weight:800;">📦 PICHLI BAKI SAREE (Pichla Mahina Bakaya):</label>
+                                <input type="number" id="jw-top-pichli-saree" value="0" oninput="saveJobWorkSheetConfig()" style="font-weight:bold; font-size:13px; border-color:#fdba74;">
+                            </div>
+                            <div>
+                                <label style="color:#c2410c; font-size:11px; font-weight:800;">💰 PICHLA BAKAYA PAISA (₹ Pichle Mahine Se):</label>
+                                <input type="number" step="any" id="jw-top-pichla-paisa" value="0" oninput="saveJobWorkSheetConfig()" style="font-weight:bold; font-size:13px; border-color:#fdba74;">
+                            </div>
+                        </div>
+
+                        <div id="add-jw-unified-form" style="background:#f8fafc; border:1px solid #cbd5e1; padding:15px; border-radius:10px; margin-bottom:15px;">
+                            <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; padding:12px; margin-bottom:12px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                                    <strong style="color:#e11d48; font-size:13px;">📤 JANE WALI SAREE (Batch Entry)</strong>
+                                    
+                                    <div id="jw-calender-stock-source-wrap" style="display:none; gap:12px; font-size:12px; font-weight:700;">
+                                        <span style="color:#475569;">Stock Kahan Se Kate:</span>
+                                        <label style="color:#2563eb; cursor:pointer;"><input type="radio" name="jw-source-rad" id="jw-source-fresh" checked> 🥻 Main Godown Fresh Stock</label>
+                                        <label style="color:#059669; cursor:pointer;"><input type="radio" name="jw-source-rad" id="jw-source-cutting"> ✂️ Cutting Se Aayi hui Saree</label>
+                                    </div>
+                                    <div id="jw-cutting-notice" style="display:none; font-size:11px; font-weight:700; color:#e11d48;">
+                                        ℹ️ Cutting ka maal sirf Main Godown ke Fresh Saree Stock se katega.
+                                    </div>
+                                </div>
+
+                                <div style="display:grid; grid-template-columns:1fr 1.5fr 1fr auto; gap:8px; align-items:flex-end;">
+                                    <div><label style="font-size:11px; font-weight:700;">Date</label><input type="date" id="jw-form-diya-date" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                                    <div><label style="font-size:11px; font-weight:700;">Karigar Name</label><input type="text" id="jw-diya-karigar" list="dl-karigers-list" placeholder="Karigar Name" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                                    <div><label style="font-size:11px; font-weight:700; color:#e11d48;">QTY (Pcs)</label><input type="number" id="jw-diya-qty" placeholder="0" style="width:100%; padding:6px; font-size:12px; border:1px solid #fca5a5; border-radius:6px; font-weight:bold;"></div>
+                                    <div><button class="add-btn" type="button" style="background:#e11d48; padding:7px 14px; font-weight:bold;" onclick="addDiyaBatchKarigarItem()">+ Jodein</button></div>
+                                </div>
+                                <datalist id="dl-karigers-list"></datalist>
+
+                                <div id="jw-diya-batch-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+                                <div id="jw-diya-batch-total-text" style="font-size:12px; font-weight:800; color:#e11d48; margin-top:4px;"></div>
+                            </div>
+
+                            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:12px;">
+                                <strong style="color:#15803d; font-size:13px; display:block; margin-bottom:8px;">📥 AANE WALI SAREE (Batch Entry)</strong>
+                                
+                                <div style="display:grid; grid-template-columns:1fr 1.5fr 1fr auto; gap:8px; align-items:flex-end;">
+                                    <div><label style="font-size:11px; font-weight:700;">Date</label><input type="date" id="jw-form-aayi-date" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                                    <div><label style="font-size:11px; font-weight:700;">Karigar Name</label><input type="text" id="jw-aayi-karigar" list="dl-karigers-list" placeholder="Karigar Name" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                                    <div><label style="font-size:11px; font-weight:700; color:#15803d;">QTY (Pcs)</label><input type="number" id="jw-aayi-qty" placeholder="0" style="width:100%; padding:6px; font-size:12px; border:1px solid #86efac; border-radius:6px; font-weight:bold;"></div>
+                                    <div><button class="add-btn" type="button" style="background:#15803d; padding:7px 14px; font-weight:bold;" onclick="addAayiBatchKarigarItem()">+ Jodein</button></div>
+                                </div>
+
+                                <div id="jw-aayi-batch-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+                                <div id="jw-aayi-batch-total-text" style="font-size:12px; font-weight:800; color:#15803d; margin-top:4px;"></div>
+                            </div>
+
+                            <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:10px; margin-bottom:12px;">
+                                <strong style="color:#c2410c; font-size:12px; display:block; margin-bottom:6px;">⚠️ DAMAGE / LOTT</strong>
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                    <div><label style="font-size:11px; font-weight:700; color:#dc2626;">Damage (Pcs)</label><input type="number" id="jw-form-damage-pcs" placeholder="0" style="width:100%; padding:6px; font-size:12px; border:1px solid #fca5a5; border-radius:6px;"></div>
+                                    <div><label style="font-size:11px; font-weight:700; color:#dc2626;">Katuti (₹)</label><input type="number" step="any" id="jw-form-damage-amt" placeholder="0" style="width:100%; padding:6px; font-size:12px; border:1px solid #fca5a5; border-radius:6px;"></div>
+                                </div>
+                            </div>
+
+                            <button class="add-btn" style="background:#0d9488; width:100%; padding:11px; font-size:14px; font-weight:800;" onclick="saveJobWorkBatchLine()">💾 Poori Batch Entry Save Karein (Line Jodein)</button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="sheet-table">
+                                <thead>
+                                    <tr style="background:#0d9488; color:white;">
+                                        <th>Date</th>
+                                        <th>Gayi Saree</th>
+                                        <th>Gayi Detail</th>
+                                        <th>Wapas Aai Saree</th>
+                                        <th>Aai Detail</th>
+                                        <th>Damage (Pcs)</th>
+                                        <th>Damage (₹)</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="jw-sheet-rows-body"></tbody>
+                            </table>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-top:15px; margin-bottom:15px;">
+                            <div class="calc-card" style="border-top:4px solid #dc2626; text-align:center; padding:12px 8px;">
+                                <div style="font-size:11px; font-weight:700; color:#991b1b;">SAREE TOTAL GAYI</div>
+                                <h3 id="jw-card-total-gayi" style="color:#dc2626; font-size:18px; margin-top:4px;">0 Pcs</h3>
+                            </div>
+                            <div class="calc-card" style="border-top:4px solid #059669; text-align:center; padding:12px 8px;">
+                                <div style="font-size:11px; font-weight:700; color:#065f46;">SAREE TOTAL AAI</div>
+                                <h3 id="jw-card-total-aayi" style="color:#059669; font-size:18px; margin-top:4px;">0 Pcs</h3>
+                            </div>
+                            <div class="calc-card" style="border-top:4px solid #ea580c; text-align:center; padding:12px 8px;">
+                                <div style="font-size:11px; font-weight:700; color:#c2410c;">LOTT TOTAL</div>
+                                <h3 id="jw-card-total-lott" style="color:#ea580c; font-size:18px; margin-top:4px;">0 Pcs</h3>
+                            </div>
+                            <div class="calc-card" style="border-top:4px solid #0284c7; text-align:center; padding:12px 8px;">
+                                <div style="font-size:11px; font-weight:700; color:#0369a1;">PENDING BAKI SAREE</div>
+                                <h3 id="jw-calc-baki-saree-display" style="color:#0284c7; font-size:18px; margin-top:4px;">0 Pcs</h3>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- VIEW 4: DUKAN BHEJA -->
+                <div id="jw-dukan-view" style="display:none;">
+                    <div class="module-header">
+                        <button class="back-btn" onclick="showJobWorkHub()">← Wapas Hub</button>
+                        <h2 style="color:#059669; font-size:18px; font-weight:700;">🏪 Apni Dukan Bheja (Final Out Register)</h2>
+                        <div></div>
+                    </div>
+
+                    <div class="summary-bar" style="margin-bottom:15px;">
+                        <div class="summary-box" style="border-top:4px solid #0284c7;">
+                            <span>CALENDER SE TAYAAR SAREE</span>
+                            <h3 id="jw-stat-calender-finished" style="color:#0284c7;">0 Pcs</h3>
+                        </div>
+                        <div class="summary-box" style="border-top:4px solid #059669;">
+                            <span>DUKAN BHEJI GAYI (OUT)</span>
+                            <h3 id="jw-stat-dukan-sent" style="color:#059669;">0 Pcs</h3>
+                        </div>
+                        <div class="summary-box" style="border-top:4px solid #ea580c;">
+                            <span>KARKHANE ME BACHI SAREE</span>
+                            <h3 id="jw-stat-karkhana-bacha" style="color:#ea580c;">0 Pcs</h3>
+                        </div>
+                    </div>
+
+                    <div class="filter-panel" style="background:#f0fdf4; border-color:#bbf7d0;">
+                        <div class="filter-date-group">
+                            <label>From Date:</label><input type="date" id="jw-dukan-from-date">
+                            <label>To Date:</label><input type="date" id="jw-dukan-to-date">
+                            <button class="filter-btn" style="background:#059669;" onclick="filterDukanTransfers()">Filter</button>
+                            <button class="reset-btn" onclick="resetDukanFilter()">Reset</button>
+                        </div>
+                        <span id="jw-dukan-filter-total" style="font-size:13px; font-weight:800; color:#059669; margin-left:auto;"></span>
+                    </div>
+
+                    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:15px; margin-bottom:15px;">
+                        <strong style="color:#059669; font-size:13px; display:block; margin-bottom:8px;">➕ Karkhane Se Apni Dukan Maal Bhejein:</strong>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 2fr auto; gap:8px;">
+                            <div><label style="font-size:11px; font-weight:700;">Date</label><input type="date" id="jw-dukan-date" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div><label style="font-size:11px; font-weight:700; color:#059669;">Pcs Dukan Bheje</label><input type="number" id="jw-dukan-pcs" placeholder="0" style="width:100%; padding:6px; font-size:12px; border:1px solid #86efac; border-radius:6px; font-weight:bold;"></div>
+                            <div><label style="font-size:11px; font-weight:700;">Dukan / Gaddi Note</label><input type="text" id="jw-dukan-note" placeholder="Dukan / Parcel Note" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                            <div style="display:flex; align-items:flex-end;"><button class="add-btn" style="background:#059669; padding:8px 14px;" onclick="addDukanTransferEntry()">+ Dukan Bheja</button></div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr style="background:#059669; color:white;">
+                                    <th>Tareekh</th>
+                                    <th>Dukan Bheje (Pcs)</th>
+                                    <th>Dukan / Gaddi Note</th>
+                                    <th style="text-align:center;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jw-dukan-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- VIEW 5: JOB WORK BILLS & PAYMENT REGISTER -->
+                <div id="jw-billing-view" style="display:none;">
+                    <div class="module-header">
+                        <button class="back-btn" onclick="showJobWorkHub()">← Wapas Hub</button>
+                        <h2 style="color:#7c3aed; font-size:18px; font-weight:700;">💳 Job Work Bills & Payment Register</h2>
+                        <button class="add-btn" style="background:#7c3aed;" onclick="toggleAddJwBillForm()">+ Naya Bill Darj Karein</button>
+                    </div>
+
+                    <div class="summary-bar" style="margin-bottom:15px;">
+                        <div class="summary-box" style="border-top:4px solid #dc2626; background:#fef2f2;">
+                            <span style="color:#991b1b; font-weight:700;">🔴 KUL BILL BANA</span>
+                            <h3 id="jw-bill-stat-total" style="color:#dc2626; font-size:22px;">₹ 0</h3>
+                        </div>
+                        <div class="summary-box" style="border-top:4px solid #059669; background:#ecfdf5;">
+                            <span style="color:#065f46; font-weight:700;">🟢 KUL CHUKTA (PAID)</span>
+                            <h3 id="jw-bill-stat-paid" style="color:#059669; font-size:22px;">₹ 0</h3>
+                        </div>
+                        <div class="summary-box" style="border-top:4px solid #ea580c; background:#fff7ed;">
+                            <span style="color:#c2410c; font-weight:700;">🟠 KUL DENA BAKI HAI</span>
+                            <h3 id="jw-bill-stat-pending" style="color:#ea580c; font-size:22px;">₹ 0</h3>
+                        </div>
+                    </div>
+
+                    <div class="sheet-tabs-bar" style="margin-bottom:12px;">
+                        <div class="sheet-tabs-list">
+                            <button class="sheet-tab active" id="btn-jw-bill-pending" onclick="switchJwBillTab('pending')">🔴 Dena Baki Hai (Pending Bills)</button>
+                            <button class="sheet-tab" id="btn-jw-bill-paid" onclick="switchJwBillTab('paid')">🟢 Chukta Ho Chuka (Paid Bills)</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-panel" style="margin-bottom:14px; background:#f5f3ff; border:1px solid #ddd6fe; padding:8px 12px;">
+                        <input type="text" id="jw-search-bill-input" class="search-box" placeholder="🔍 Search Worker, Bill No., Tareekh..." oninput="filterJwBills()" style="width:100%;">
+                    </div>
+
+                    <div id="add-jw-bill-form" class="custom-form" style="display:none; background:#f8fafc; border:1px solid #cbd5e1; padding:15px; border-radius:10px; margin-bottom:15px;">
+                        <strong style="color:#7c3aed; font-size:13px; display:block; margin-bottom:10px;">➕ Job Work Wale Ka Naya Bill Darj Karein:</strong>
+                        <div class="form-row-4">
+                            <div class="input-group"><label>Bill Date</label><input type="date" id="jw-bill-input-date"></div>
+                            <div class="input-group">
+                                <label style="color:#7c3aed; font-weight:800;">Bill No. / Challan No.</label>
+                                <input type="text" id="jw-bill-input-no" placeholder="Jaise: 101">
+                            </div>
+                            <div class="input-group">
+                                <label>Job Worker Name</label>
+                                <select id="jw-bill-input-worker" style="padding:7px; border:1px solid #cbd5e1; border-radius:6px;"></select>
+                            </div>
+                            <div class="input-group"><label>Saree Pcs</label><input type="number" id="jw-bill-input-pcs" placeholder="Jaise: 500"></div>
+                        </div>
+                        <div class="form-row-2">
+                            <div class="input-group">
+                                <label style="color:#b91c1c; font-weight:800;">Kul Bill Amount (₹)</label>
+                                <input type="number" step="any" id="jw-bill-input-amt" placeholder="Jaise: 15000" style="border-color:#fca5a5; font-weight:bold;">
+                            </div>
+                            <div class="input-group">
+                                <label>Parchi / Bill Note</label>
+                                <input type="text" id="jw-bill-input-note" placeholder="500 Saree Lot / Note">
+                            </div>
+                        </div>
+                        <button class="add-btn" style="background:#7c3aed; padding:9px 18px;" onclick="saveJobWorkNewBill()">Save Bill</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead id="jw-bills-table-thead"></thead>
+                            <tbody id="jw-bills-table-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- VIEW 6: JOB WORK SEPARATE DAY-BOOK & TRACKING -->
+                <div id="jw-movement-view" style="display:none;">
+                    <div class="module-header">
+                        <button class="back-btn" onclick="showJobWorkHub()">← Wapas Hub</button>
+                        <div>
+                            <h2 style="color:#d97706; font-size:18px; font-weight:800;">🔄 Job Work Rozana Day-Book & Tracking</h2>
+                            <p style="color:#64748b; font-size:12px; margin-top:2px;">Cutting, Calender aur Job Work Payment ka rozana alag hisab</p>
+                        </div>
+                        <div class="daily-controls">
+                            <label style="font-size:12px; font-weight:700; color:#475569;">Tarikh:</label>
+                            <input type="date" id="jw-mov-date" onchange="renderJwMovementDaybook()">
+                            <button class="today-btn" style="background:#d97706;" onclick="setJwMovementToday()">📅 Aaj</button>
+                        </div>
+                    </div>
+
+                    <div class="daybook-btn-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:15px;">
+                        <button class="daybook-tab-btn active" id="btn-jw-mov-cutting" onclick="switchJwMovementTab('cutting')">
+                            <span class="day-icon">✂️</span>
+                            <div>
+                                <div class="day-title">1. Cutting Day-Book</div>
+                                <div class="day-sub" id="sub-jw-mov-cutting">Gayi: 0 | Aayi: 0</div>
+                            </div>
+                        </button>
+
+                        <button class="daybook-tab-btn" id="btn-jw-mov-calender" onclick="switchJwMovementTab('calender')">
+                            <span class="day-icon">🎛️</span>
+                            <div>
+                                <div class="day-title">2. Calender Day-Book</div>
+                                <div class="day-sub" id="sub-jw-mov-calender">Gayi: 0 | Aayi: 0</div>
+                            </div>
+                        </button>
+
+                        <button class="daybook-tab-btn" id="btn-jw-mov-payment" onclick="switchJwMovementTab('payment')">
+                            <span class="day-icon">💳</span>
+                            <div>
+                                <div class="day-title">3. Job Work Payment</div>
+                                <div class="day-sub" id="sub-jw-mov-payment">Diya: ₹ 0</div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="filter-panel" style="background:#fffbeb; border:1px solid #fde68a; margin-bottom:12px; padding:8px 12px;">
+                        <input type="text" id="jw-mov-search" class="search-box" placeholder="🔍 Search Kariger, Bill No., Vivran..." oninput="renderJwMovementDaybook()" style="width:100%;">
+                    </div>
+
+                    <div class="table-responsive">
+                        <table>
+                            <thead id="jw-mov-table-thead"></thead>
+                            <tbody id="jw-mov-table-tbody"></tbody>
+                            <tfoot id="jw-mov-table-tfoot"></tfoot>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL 1: PROFILE MODAL -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:520px;">
+            <div class="modal-header">
+                <div><h3 style="color:#1e3a8a; font-weight:800;">👤 User Profile & Settings</h3></div>
+                <button class="close-modal-btn" onclick="closeProfileModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group"><label>Aapka Naam</label><input type="text" id="prof-name"></div>
+                <div class="input-group"><label>User ID</label><input type="text" id="prof-id" disabled style="background:#f1f5f9; font-weight:bold;"></div>
+                <div class="input-group"><label>Mobile</label><input type="tel" id="prof-mobile"></div>
+                <div style="background:#fff7ed; border:1px solid #fdba74; padding:14px; border-radius:10px; margin-bottom:15px;">
+                    <div style="font-size:12px; font-weight:800; color:#c2410c; margin-bottom:8px;">🔐 Security PIN & Password:</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div><label style="font-size:11px; font-weight:700; color:#c2410c;">🔒 4-Digit PIN</label><input type="password" maxlength="4" id="prof-pin" style="border-color:#fca5a5; font-size:15px; font-weight:bold; letter-spacing:2px;"></div>
+                        <div><label style="font-size:11px; font-weight:700; color:#1e3a8a;">🔑 Password</label><input type="text" id="prof-pass" style="border-color:#93c5fd; font-size:14px; font-weight:bold;"></div>
+                    </div>
+                </div>
+                <button class="btn" onclick="saveProfileSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SANCHA DETAIL MODAL -->
+    <div id="sancha-detail-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div><h3 id="sancha-modal-title" style="color:#0284c7; font-weight:800;">📦 Sancha Detail</h3></div>
+                <button class="close-modal-btn" onclick="closeSanchaDetailModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin-bottom:12px; background:#f0f9ff; padding:12px; border-radius:8px;">
+                    <div><label style="font-size:11px;">Date</label><input type="date" id="sancha-entry-date" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                    <div><label style="font-size:11px; font-weight:700;">Kitna Aaya</label><input type="number" step="any" id="sancha-entry-qty" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                    <div><label style="font-size:11px;">Note</label><input type="text" id="sancha-entry-note" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px;"></div>
+                    <div style="display:flex; align-items:flex-end;"><button class="add-btn" style="background:#0284c7; width:100%; padding:7px;" onclick="addSanchaStockEntry()">+ Add Stock</button></div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead><tr style="background:#0284c7; color:white;"><th>Tarikh</th><th>Len-Den</th><th>Kitna</th><th>Vivran / Kahan Se Aaya</th><th style="text-align:center;">Action</th></tr></thead>
+                        <tbody id="sancha-detail-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: PASSBOOK HISTORY MODAL -->
+    <div id="item-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div><h3 id="modal-item-title" style="color:#1e3a8a; font-weight:800;">📖 Passbook History</h3></div>
+                <button class="close-modal-btn" onclick="closeItemModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <div class="filter-panel" style="margin-bottom:12px; padding:8px 12px; gap:8px;">
+                    <div class="filter-date-group">
+                        <label style="font-size:11px;">From:</label><input type="date" id="modal-from-date" style="padding:4px 8px; font-size:12px;">
+                        <label style="font-size:11px;">To:</label><input type="date" id="modal-to-date" style="padding:4px 8px; font-size:12px;">
+                        <button class="filter-btn" style="padding:5px 12px; font-size:11px;" onclick="filterModalPassbook()">Filter</button>
+                        <button class="reset-btn" style="padding:5px 10px; font-size:11px;" onclick="resetModalPassbook()">Reset</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead id="modal-history-thead">
+                            <tr style="background:#334155; color:white;"><th>Tarikh</th><th>Kariger / Vivran</th><th>Qty / Rupaye</th><th style="text-align:center;">Action</th></tr>
+                        </thead>
+                        <tbody id="modal-history-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: JOB WORK BATCH PASSBOOK -->
+    <div id="jw-batch-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:560px;">
+            <div class="modal-header" style="background:#0d9488; color:white;">
+                <div><h3 id="jw-batch-modal-title" style="color:white; font-weight:800;">📖 Batch Karigar Breakdown</h3></div>
+                <button class="close-modal-btn" style="color:white;" onclick="closeJwBatchModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <p id="jw-batch-modal-subtitle" style="font-size:12px; color:#64748b; margin-bottom:10px;"></p>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#0d9488; color:white;">
+                                <th>S.No.</th>
+                                <th>Karigar Ka Naam</th>
+                                <th>Saree Qty (Pcs)</th>
+                                <th style="text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jw-batch-modal-tbody"></tbody>
+                        <tfoot id="jw-batch-modal-tfoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: QUICK PAYMENT MODAL -->
+    <div id="jw-pay-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:440px;">
+            <div class="modal-header" style="background:#059669; color:white;">
+                <div><h3 style="color:white; font-weight:800;">💰 Paisa Diya (Payment Entry)</h3></div>
+                <button class="close-modal-btn" style="color:white;" onclick="closeJwPayModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="jw-pay-bill-id">
+                <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:12px;">
+                    <div style="font-size:12px; color:#15803d; font-weight:700;" id="jw-pay-modal-worker-text">Worker: -</div>
+                    <div style="font-size:14px; font-weight:800; color:#b91c1c; margin-top:2px;" id="jw-pay-modal-baki-text">Abhi Baki: ₹ 0</div>
+                </div>
+
+                <div class="input-group"><label>Payment Date</label><input type="date" id="jw-pay-date"></div>
+                <div class="input-group">
+                    <label style="color:#059669; font-weight:800;">Kitna Rupya Diya (₹)</label>
+                    <input type="number" step="any" id="jw-pay-amount" placeholder="0" style="font-weight:bold; font-size:15px; border-color:#86efac;">
+                </div>
+                <div class="input-group">
+                    <label>Payment Ka Tarika</label>
+                    <select id="jw-pay-mode" style="padding:7px; border:1px solid #cbd5e1; border-radius:6px;">
+                        <option value="Cash">Cash (Rokad)</option>
+                        <option value="Online / UPI">Online / UPI</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>Parchi / Payment Note</label><input type="text" id="jw-pay-note" placeholder="Kis cheez ka paisa diya"></div>
+
+                <button class="btn" style="background:#059669;" onclick="saveJobWorkPayment()">Save Payment & Update</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 6: KARKHANA MANAGER MODAL -->
+    <div id="karkhana-manager-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:540px;">
+            <div class="modal-header" style="background:#0284c7; color:white;">
+                <div><h3 style="color:white; font-weight:800;">🏭 Karkhana Management</h3></div>
+                <button class="close-modal-btn" style="color:white;" onclick="closeKarkhanaManagerModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="karkhana-edit-id">
+                <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:12px; border-radius:8px; margin-bottom:14px;">
+                    <strong style="color:#0284c7; font-size:12px; display:block; margin-bottom:8px;">➕ Naya Karkhana Jodein ya Naam Badlein:</strong>
+                    <div style="display:grid; grid-template-columns:2fr 1fr auto; gap:8px;">
+                        <input type="text" id="karkhana-input-name" placeholder="Karkhane Ka Naam" style="padding:7px; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold;">
+                        <input type="text" id="karkhana-input-location" placeholder="Location / Note" style="padding:7px; border:1px solid #cbd5e1; border-radius:6px;">
+                        <button class="add-btn" style="background:#0284c7; padding:7px 14px;" id="karkhana-save-btn" onclick="saveKarkhanaFromManager()">Save</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#0284c7; color:white;">
+                                <th>S.No.</th>
+                                <th>Karkhane Ka Naam</th>
+                                <th>Location</th>
+                                <th style="text-align:center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="karkhana-manager-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 7: RAW MATERIAL & SANCHA TRANSFER MODAL -->
+    <div id="material-transfer-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:480px;">
+            <div class="modal-header" style="background:#0284c7; color:white;">
+                <div><h3 id="mat-transfer-modal-title" style="color:white; font-weight:800;">🚚 Karkhane Ko Maal Bheja</h3></div>
+                <button class="close-modal-btn" style="color:white;" onclick="closeMaterialTransferModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="mat-transfer-type" value="bana">
+                <div class="input-group"><label>Date</label><input type="date" id="mat-transfer-date"></div>
+                <div class="input-group">
+                    <label style="color:#0284c7; font-weight:800;">Kis Karkhane Ko Bheja</label>
+                    <select id="mat-transfer-dest-karkhana" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold;"></select>
+                </div>
+                <div class="input-group">
+                    <label id="mat-transfer-item-label">Item Ka Naam</label>
+                    <input type="text" id="mat-transfer-item-name" placeholder="Item Name">
+                </div>
+                <div class="input-group">
+                    <label style="color:#b91c1c; font-weight:800;" id="mat-transfer-qty-label">Kitna Bheja (Qty)</label>
+                    <input type="number" step="any" id="mat-transfer-qty" placeholder="0.00" style="font-weight:bold; font-size:15px; border-color:#fca5a5;">
+                </div>
+                <div class="input-group"><label>Gaadi / Challan Note</label><input type="text" id="mat-transfer-note" placeholder="Challan No. / Tempo Note"></div>
+
+                <button class="btn" style="background:#0284c7;" onclick="saveMaterialTransferEntry()">Save Transfer & Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 8: SAREE INWARD / TRANSFER MODAL -->
+    <div id="saree-transfer-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:480px;">
+            <div class="modal-header" style="background:#059669; color:white;">
+                <div><h3 style="color:white; font-weight:800;">🚚 Karkhane Se Saree Main Godown Aayi</h3></div>
+                <button class="close-modal-btn" style="color:white;" onclick="closeSareeTransferModal()">X</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group"><label>Date</label><input type="date" id="saree-transfer-date"></div>
+                <div class="input-group">
+                    <label style="color:#059669; font-weight:800;">Kis Karkhane Se Aayi</label>
+                    <select id="saree-transfer-source-karkhana" style="padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold;"></select>
+                </div>
+                <div class="input-group"><label>Saree Design Ka Naam</label><input type="text" id="saree-transfer-name" placeholder="Saree Name"></div>
+                <div class="input-group">
+                    <label style="color:#059669; font-weight:800;">Kitni Saree Aayi (Pcs)</label>
+                    <input type="number" id="saree-transfer-pcs" placeholder="0" style="font-weight:bold; font-size:15px; border-color:#86efac;">
+                </div>
+                <div class="input-group"><label>Challan / Gaadi Note</label><input type="text" id="saree-transfer-note" placeholder="Challan / Driver Note"></div>
+
+                <button class="btn" style="background:#059669;" onclick="saveSareeTransferEntry()">Receive Saree in Main Godown</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 9: YEAR-END CLOSING & DELETE SESSION ZONE (ID & PASSWORD PROTECTED) -->
+    <div id="session-closing-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:540px;">
+            <div class="modal-header" style="background:#7c3aed; color:white;">
+                <div><h3 style="color:white; font-weight:800;">📅 Year-End Closing & Session Manager</h3></div>
+                <button class="close-modal-btn" style="color:white;" onclick="closeSessionClosingModal()">X</button>
+            </div>
+            <div class="modal-body">
+                
+                <!-- 1. START NEW YEAR SECTION -->
+                <div style="background:#f5f3ff; border:1px solid #ddd6fe; padding:12px; border-radius:8px; margin-bottom:14px; font-size:13px; color:#4c1d95; line-height:1.6;">
+                    <strong>ℹ️ 1 April / Year-End Closing Kaise Hogi:</strong>
+                    <ul style="margin-top:4px; padding-left:18px;">
+                        <li>Purana saal hamesha ke liye <strong>सुरक्षित (Locked)</strong> rahega.</li>
+                        <li>Sabhi karigaron ka bakaya naye saal ka <strong>Opening Balance</strong> ban jayega.</li>
+                        <li>Godamo ka bacha maal naye saal ka <strong>Opening Stock</strong> ban jayega.</li>
+                    </ul>
+                </div>
+
+                <div class="input-group">
+                    <label>Abhi Ka Current Session:</label>
+                    <input type="text" id="session-current-display" disabled style="background:#f1f5f9; font-weight:bold; color:#7c3aed;">
+                </div>
+
+                <div class="input-group">
+                    <label style="color:#7c3aed; font-weight:800;">Naye Saal (Session) Ka Naam Likhein:</label>
+                    <input type="text" id="session-new-input" placeholder="Jaise: 2027-2028" style="font-weight:bold; font-size:15px; border-color:#c4b5fd;">
+                </div>
+
+                <button class="btn" style="background:#7c3aed; margin-top:5px; padding:12px; font-weight:800;" onclick="startSequentialYearClosing()">🚀 Start Step-by-Step Closing</button>
+
+                <!-- 2. DANGER ZONE: DELETE BROKEN / EMPTY SESSION (PASSWORD PROTECTED) -->
+                <div style="margin-top:25px; padding-top:16px; border-top:2px dashed #fca5a5;">
+                    <strong style="color:#b91c1c; font-size:13px; display:block; margin-bottom:6px;">🗑️ Fasa Hua / Khali Session Delete Karein (Danger Zone)</strong>
+                    
+                    <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px; margin-bottom:12px; font-size:12px; color:#991b1b; line-height:1.5;">
+                        ⚠️ <strong>DHYAN DEIN:</strong> Is session ka poora data mit jayega. Suraksha ke liye apna User ID aur Password bharein tabhi session delete hoga.
+                    </div>
+
+                    <div class="input-group">
+                        <label style="color:#b91c1c; font-weight:800;">Kis Session Ko Delete Karna Hai:</label>
+                        <select id="session-delete-select" style="border-color:#fca5a5; font-weight:bold; padding:8px;"></select>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                        <div class="input-group">
+                            <label style="color:#475569; font-weight:700;">Aapka User ID:</label>
+                            <input type="text" id="session-del-user-id" placeholder="Apna User ID daalein">
+                        </div>
+                        <div class="input-group">
+                            <label style="color:#475569; font-weight:700;">Aapka Password:</label>
+                            <input type="password" id="session-del-password" placeholder="Password daalein">
+                        </div>
+                    </div>
+
+                    <button class="btn" style="background:#dc2626; padding:11px; font-weight:800;" onclick="confirmAndDeleteSessionWithAuth()">🔒 Verify Karke Session Delete Karein</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎬 MODAL 10: STEP-BY-STEP SEQUENTIAL TRANSFER & WELCOME MODAL -->
+    <div id="session-transfer-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width:600px; padding:25px; border-radius:18px; box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            
+            <div id="transfer-progress-view">
+                <div style="text-align:center; margin-bottom:20px;">
+                    <span style="font-size:32px;">🎬</span>
+                    <h3 style="color:#1e3a8a; font-weight:900; font-size:20px; margin-top:4px;">SIMPLICITY YEAR-END DATA TRANSFER</h3>
+                    <p style="color:#64748b; font-size:12px; margin-top:2px;">Bari-Bari Har Module Ka Data Naye Saal Me Surakshit Transfer Ho Raha Hai</p>
+                </div>
+
+                <!-- OVERALL MAIN PROGRESS BAR -->
+                <div style="background:#e2e8f0; border-radius:12px; height:12px; overflow:hidden; margin-bottom:20px;">
+                    <div id="transfer-main-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #2563eb, #10b981); transition:width 0.2s ease;"></div>
+                </div>
+
+                <!-- 5 STAGES CHECKLIST -->
+                <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+                    
+                    <!-- STAGE 1 -->
+                    <div id="stage-card-1" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">1. 🧵 Kariger Master & Tani Khata</strong>
+                            <span id="stage-badge-1" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-1" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-1" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 2 -->
+                    <div id="stage-card-2" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">2. 🥻 Saree Stock (Sabhi Godam)</strong>
+                            <span id="stage-badge-2" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-2" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-2" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 3 -->
+                    <div id="stage-card-3" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">3. 🧶 Bana & ✨ Zari Stock Freeze</strong>
+                            <span id="stage-badge-3" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-3" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-3" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 4 -->
+                    <div id="stage-card-4" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">4. ⚙️ Sancha & ✂️ Job Work Accounts</strong>
+                            <span id="stage-badge-4" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-4" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-4" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                    <!-- STAGE 5 -->
+                    <div id="stage-card-5" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong style="font-size:13px; color:#1e3a8a;">5. 🔒 Final Cloud & Session Safe Lock</strong>
+                            <span id="stage-badge-5" style="font-size:11px; font-weight:700; color:#64748b; background:#e2e8f0; padding:3px 8px; border-radius:20px;">⏸️ Waiting</span>
+                        </div>
+                        <div style="background:#e2e8f0; border-radius:6px; height:6px; overflow:hidden; margin-top:8px;">
+                            <div id="stage-bar-5" style="width:0%; height:100%; background:#2563eb; transition:width 0.1s ease;"></div>
+                        </div>
+                        <small id="stage-status-5" style="display:block; font-size:11px; color:#64748b; margin-top:4px;">Wait kar raha hai...</small>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- 🎉 CELEBRATION & WELCOME MESSAGE VIEW -->
+            <div id="transfer-welcome-view" style="display:none; text-align:center; padding:15px 10px;">
+                <div style="font-size:55px; margin-bottom:10px;">🎉 ✨ 🚀</div>
+                <h2 style="color:#059669; font-weight:900; font-size:24px; margin-bottom:6px;">MUBARAK HO! TRANSFER SAFAL RAHA!</h2>
+                <div style="display:inline-block; background:#ecfdf5; border:1px solid #a7f3d0; color:#059669; padding:4px 14px; border-radius:20px; font-weight:800; font-size:13px; margin-bottom:16px;">
+                    📅 Naya Saal: <span id="welcome-session-name">-</span>
+                </div>
+                
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; text-align:left; font-size:13px; color:#334155; line-height:1.8; margin-bottom:20px;">
+                    <div style="color:#059669; font-weight:700;">✔️ Sabhi Karigaron Ka Baki Bakaya Tani 1 Opening Ban Gaya!</div>
+                    <div style="color:#059669; font-weight:700;">✔️ Sabhi Godamo Ka Bacha Saree, Bana & Zari Opening Stock Freeze Ho Gaya!</div>
+                    <div style="color:#0284c7; font-weight:700;">✔️ Pichla Saal Hamesha Ke Liye Surakshit (Locked) Ho Chuka Hai!</div>
+                    <div style="color:#7c3aed; font-weight:700;">✔️ Naye Saal Me ERP Bilkul Halka, Fresh Aur Superfast Khul Chuka Hai!</div>
+                </div>
+
+                <button class="btn" style="background:linear-gradient(135deg, #059669, #10b981); padding:14px; font-size:16px; font-weight:800; box-shadow:0 8px 20px rgba(5,150,105,0.3);" onclick="finishSessionTransferAndEnter()">🚀 Naye Saal Ka Karobar Shuru Karein</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT SCRIPTS (Auto-Bust Cache v37) -->
+    <script src="auth.js?v=37"></script>
+    <script src="kariger.js?v=37"></script>
+    <script src="stock.js?v=37"></script>
+    <script src="jobwork.js?v=37"></script>
+    <script src="daybook.js?v=37"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => {
+            console.log('✅ Simplicity PWA Service Worker Ready!');
+        });
+    }
+    </script>
+</body>
+</html>
