@@ -1,53 +1,38 @@
 /* ========================================================
-   SIMPLICITY ERP - OFFLINE STORAGE & DATA CACHE ENGINE
+   SIMPLICITY ERP - OFFLINE STORAGE & DATA CACHE ENGINE (FIXED)
    File: core/storage.js • Developed by Farhan Jawed
-   (IndexedDB Enterprise Preload, Session Scope & Memory Sync)
 ======================================================== */
 
-// Global App States
 var APP_MEMORY_CACHE = {};
 var idbInstance = null;
 var isRemoteUpdating = false;
 var isBackupPreviewMode = false;
 var PREVIEW_BACKUP_DATA = null;
 
-// Ye keys session-independent hain (Saal badalne par bhi common rahengi)
 var GLOBAL_APP_KEYS = [
     "app_sessions_list", 
     "app_active_session", 
     "karkhana_list", 
     "app_users", 
-    "info_ledger"
+    "info_ledger",
+    "sancha_items" /* Sancha items saal badalne par bhi safe rahenge */
 ];
 
 function clearMemoryCache() {
     APP_MEMORY_CACHE = {};
 }
 
-// 1. FAST ENTERPRISE INDEXED-DB ENGINE
 function openEnterpriseIndexedDB(callback) {
-    if (idbInstance) { 
-        if (callback) callback(idbInstance); 
-        return; 
-    }
+    if (idbInstance) { if (callback) callback(idbInstance); return; }
     try {
         var req = window.indexedDB.open("SimplicityERP_DB", 1);
         req.onupgradeneeded = function(e) {
             var dbase = e.target.result;
-            if (!dbase.objectStoreNames.contains("app_store")) {
-                dbase.createObjectStore("app_store");
-            }
+            if (!dbase.objectStoreNames.contains("app_store")) dbase.createObjectStore("app_store");
         };
-        req.onsuccess = function(e) { 
-            idbInstance = e.target.result; 
-            if (callback) callback(idbInstance); 
-        };
-        req.onerror = function() { 
-            if (callback) callback(null); 
-        };
-    } catch(err) { 
-        if (callback) callback(null); 
-    }
+        req.onsuccess = function(e) { idbInstance = e.target.result; if (callback) callback(idbInstance); };
+        req.onerror = function() { if (callback) callback(null); };
+    } catch(err) { if (callback) callback(null); }
 }
 
 function idbPut(key, value) {
@@ -60,14 +45,9 @@ function idbPut(key, value) {
     });
 }
 
-// App khulte hi IndexedDB se data RAM me load karna (Superfast Speed)
 function initIndexedDBPreload(callback) {
     openEnterpriseIndexedDB(function(dbase) {
-        if (!dbase) { 
-            migrateLocalStorageToCache(); 
-            if (callback) callback(); 
-            return; 
-        }
+        if (!dbase) { migrateLocalStorageToCache(); if (callback) callback(); return; }
         try {
             var tx = dbase.transaction("app_store", "readonly");
             var req = tx.objectStore("app_store").openCursor();
@@ -81,14 +61,8 @@ function initIndexedDBPreload(callback) {
                     if (callback) callback();
                 }
             };
-            req.onerror = function() { 
-                migrateLocalStorageToCache(); 
-                if (callback) callback(); 
-            };
-        } catch(err) { 
-            migrateLocalStorageToCache(); 
-            if (callback) callback(); 
-        }
+            req.onerror = function() { migrateLocalStorageToCache(); if (callback) callback(); };
+        } catch(err) { migrateLocalStorageToCache(); if (callback) callback(); }
     });
 }
 
@@ -111,16 +85,11 @@ function migrateLocalStorageToCache() {
     } catch(e) {}
 }
 
-// 2. DYNAMIC SESSION & USER KEY ROUTER
 function getStorageKey(key) {
     if (!currentUserId) return key;
-    
-    // Global settings jo saal ke sath nahi badalti
     if (GLOBAL_APP_KEYS.indexOf(key) !== -1) {
         return currentUserId + "_" + key;
     }
-    
-    // Financial session ke hisab se data alag rakhna
     var sess = "2026-2027";
     if (typeof getActiveFinancialSession === "function") {
         sess = getActiveFinancialSession();
@@ -132,9 +101,7 @@ function getStorageKey(key) {
     return currentUserId + "_" + sess + "_" + key;
 }
 
-// 3. MASTER GET STORE
 function getStore(key) {
-    // Agar Backup file padh rahe hain to read-only data dikhana
     if (isBackupPreviewMode && PREVIEW_BACKUP_DATA) {
         if (key.indexOf("kariger_sheets_") === 0) {
             var kId = key.replace("kariger_sheets_", "");
@@ -156,22 +123,29 @@ function getStore(key) {
     try {
         var fullKey = getStorageKey(key);
         
-        // Pehle RAM cache check karo
         if (APP_MEMORY_CACHE.hasOwnProperty(fullKey)) {
             var val = APP_MEMORY_CACHE[fullKey];
             if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return val;
             return safeArray(val);
         }
         
-        // Fir LocalStorage check karo
         var raw = localStorage.getItem(fullKey);
-        if (raw === null || raw === undefined) {
+
+        // 🛡️ SANCHA & OLD SESSION FALLBACK (KABHI STOCK GAYAB NAHI HOGA)
+        if (!raw || raw === "[]" || raw === "null") {
             var oldKey = currentUserId + "_" + key;
             var oldRaw = localStorage.getItem(oldKey);
-            if (oldRaw !== null && oldRaw !== undefined) raw = oldRaw;
+            if (oldRaw && oldRaw !== "[]") raw = oldRaw;
+
+            // Agar 2027-2028 me khali mila to 2026-2027 se uthao
+            if (!raw || raw === "[]") {
+                var prevSessKey = currentUserId + "_2026-2027_" + key;
+                var prevRaw = localStorage.getItem(prevSessKey);
+                if (prevRaw && prevRaw !== "[]") raw = prevRaw;
+            }
         }
+
         if (!raw) return [];
-        
         var parsed = JSON.parse(raw);
         APP_MEMORY_CACHE[fullKey] = parsed;
         idbPut(fullKey, parsed);
@@ -183,40 +157,25 @@ function getStore(key) {
     }
 }
 
-// 4. MASTER SET STORE
 function setStore(key, data) {
-    if (isBackupPreviewMode) {
-        console.warn("⚠️ Write Blocked: Backup Preview Mode active hai.");
-        return;
-    }
+    if (isBackupPreviewMode) return;
     if (!currentUserId) return;
 
     try {
         var fullKey = getStorageKey(key);
         var toSave = Array.isArray(data) ? safeArray(data) : data;
         
-        // RAM Cache aur IndexedDB update
         APP_MEMORY_CACHE[fullKey] = toSave;
         idbPut(fullKey, toSave);
         
-        // LocalStorage update
-        try { 
-            localStorage.setItem(fullKey, JSON.stringify(toSave)); 
-        } catch(err) {}
+        try { localStorage.setItem(fullKey, JSON.stringify(toSave)); } catch(err) {}
 
-        // Firebase Cloud Sync
         if (typeof db !== "undefined" && db && !isRemoteUpdating && currentUserId) {
             if (typeof showSyncStatus === "function") showSyncStatus("syncing");
             var fbKey = fullKey.replace(currentUserId + "_", "");
             db.ref("users/" + currentUserId + "/" + fbKey).set(toSave)
-                .then(function() { 
-                    if (typeof showSyncStatus === "function") showSyncStatus("online"); 
-                })
-                .catch(function() { 
-                    if (typeof showSyncStatus === "function") showSyncStatus("error"); 
-                });
+                .then(function() { if (typeof showSyncStatus === "function") showSyncStatus("online"); })
+                .catch(function() { if (typeof showSyncStatus === "function") showSyncStatus("error"); });
         }
-    } catch (e) {
-        console.error("Storage Save Error:", e);
-    }
+    } catch (e) {}
 }
