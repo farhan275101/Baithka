@@ -1,7 +1,7 @@
 /* ========================================================
-   SIMPLICITY ERP - SANCHA (LOOM TANI) UI & PASSBOOK ENGINE
+   SIMPLICITY ERP - SANCHA (LOOM TANI) UI & PASSBOOK ENGINE (FIXED)
    File: sancha/sancha-ui.js • Developed by Farhan Jawed
-   (Tani Bani, Kariger Salman Le Gaya, Live Holders & Passbook)
+   (Kariger Dropdown Selection, Edit Name & Live Holder Tracker)
 ======================================================== */
 
 function openSanchaModule() {
@@ -40,7 +40,7 @@ function getSanchaHoldersSummary(itemName) {
     var holderMap = {};
     hist.forEach(function(h) {
         var p = (h.person || "").trim().toUpperCase();
-        if (!p || p === "SANCHA PAR BANI" || p === "GODAM") return;
+        if (!p || p === "SANCHA PRODUCTION" || p === "SANCHA PAR BANI" || p === "GODAM" || p === "GODAM STOCK") return;
 
         if (!holderMap[p]) holderMap[p] = 0;
         var q = Number(h.qty) || 0;
@@ -56,12 +56,12 @@ function getSanchaHoldersSummary(itemName) {
     var summaryList = [];
     for (var karigerName in holderMap) {
         if (holderMap[karigerName] > 0) {
-            summaryList.push("👤 <strong>" + karigerName + "</strong> (" + holderMap[karigerName] + " Tani)");
+            summaryList.push("<span class='badge-red' style='font-size:12px; display:inline-block; margin:2px 0;'>👤 <strong>" + karigerName + "</strong> (" + holderMap[karigerName] + " Tani)</span>");
         }
     }
 
     if (!summaryList.length) {
-        return "<span style='color:#059669; font-weight:600;'>🟢 Sabhi Tani Godam Me Hai</span>";
+        return "<span class='badge-green' style='font-size:11px;'>🟢 Sabhi Tani Godam Me Hai</span>";
     }
     return summaryList.join("<br>");
 }
@@ -80,7 +80,8 @@ function cancelSanchaEdit() {
     if (eId) eId.value = "";
     document.getElementById("sancha-name").value = "";
     document.getElementById("sancha-qty").value = "";
-    document.getElementById("sancha-person").value = "";
+    var pInp = document.getElementById("sancha-person");
+    if (pInp) pInp.value = "";
     var sBtn = document.getElementById("sancha-save-btn");
     if (sBtn) sBtn.textContent = "Save Tani Stock";
 }
@@ -90,6 +91,7 @@ function saveSanchaItem() {
     var n = (document.getElementById("sancha-name") && document.getElementById("sancha-name").value || "").trim().toUpperCase();
     var q = parseFloat(document.getElementById("sancha-qty") && document.getElementById("sancha-qty").value) || 0;
     var d = (document.getElementById("sancha-date") && document.getElementById("sancha-date").value) || getTodayDate();
+    var p = (document.getElementById("sancha-person") && document.getElementById("sancha-person").value || "").trim().toUpperCase();
 
     if (!n || q <= 0) return alert("Tani/Sancha ka naam aur kitni Tani bani (Qty) bharein!");
 
@@ -131,7 +133,7 @@ function saveSanchaItem() {
         date: d,
         type: "Sancha Par Tani Bani (+ In)",
         qty: q,
-        person: "Sancha Production",
+        person: p || "Sancha Production",
         karkhanaId: currentSanchaKarkhanaFilter,
         note: q + " Tani Tayyar Hokar Stock Me Aayi"
     });
@@ -194,7 +196,7 @@ function renderSanchaTable(flist) {
             "<td style='font-weight:700;'>+" + st.totalBani + " Tani</td>" +
             "<td>" + holdersHtml + "</td>" +
             "<td><strong style='color:#0284c7; font-size:15px;'>" + st.bachiTani + " Tani Bachi</strong></td>" +
-            "<td style='text-align:center;'>" +
+            "<td style='text-align:center; white-space:nowrap;'>" +
                 "<button class='quick-btn btn-out' onclick='allotSanchaToKariger(\"" + s.id + "\")'>📤 Kariger Tani Le Gaya</button> " +
                 "<button class='quick-btn btn-in' onclick='returnSanchaFromKariger(\"" + s.id + "\")'>📥 Wapas Aayi</button> " +
                 "<button class='detail-btn' style='background:#0284c7;' onclick='viewSanchaPassbook(\"" + s.name + "\")'>📖 Passbook</button> " +
@@ -217,7 +219,7 @@ function filterSancha() {
     renderSanchaTable(filtered);
 }
 
-// 5. 📤 KARIGER TANI LE GAYA (MINUS HO JAYEGA & ASALI NAAM DARJ HOGA)
+// 5. 📤 KARIGER TANI LE GAYA (SMART KARIGER SELECTION)
 function allotSanchaToKariger(itemId) {
     var it = getSanchaItems().find(function(x) { return String(x.id) === String(itemId); });
     if (!it) return;
@@ -227,13 +229,20 @@ function allotSanchaToKariger(itemId) {
         return alert("⚠️ Is quality ki ek bhi Tani tayyar nahi bachi hai!");
     }
 
-    var karList = sanitizeKarigerList().map(function(k) { return k.name; }).join(", ");
-    var promptMsg = "Kaun sa Kariger Tani le gaya? (Jaise: Salman):\n(Registered Kariger: " + (karList || "Koi nahi") + ")";
+    var karList = sanitizeKarigerList();
+    var karNames = karList.map(function(k, idx) { return (idx + 1) + ". " + k.name; }).join("\n");
     
+    var promptMsg = "Kaun sa Kariger Tani le gaya?\nKariger ka Asali Naam likhein (Jaise: Salman):\n\nRegistered Karigers:\n" + (karNames || "Koi nahi");
     var kariger = prompt(promptMsg);
     if (!kariger || !kariger.trim()) return;
 
     var cleanName = kariger.trim().toUpperCase();
+    if (cleanName === "KARIGER") {
+        cleanName = prompt("⚠️ 'KARIGER' nahi, Kariger ka Asali Naam likhein (Jaise: SALMAN):", "SALMAN");
+        if (!cleanName || !cleanName.trim()) return;
+        cleanName = cleanName.trim().toUpperCase();
+    }
+
     var q = parseInt(prompt(cleanName + " kitni Tani le gaya (Pcs/Tani):", "1"), 10);
     if (!q || q <= 0) return;
 
@@ -267,7 +276,7 @@ function returnSanchaFromKariger(itemId) {
     var it = getSanchaItems().find(function(x) { return String(x.id) === String(itemId); });
     if (!it) return;
 
-    var kariger = prompt("Kis Kariger ne Tani wapas ki (Jaise: Salman):");
+    var kariger = prompt("Kis Kariger ne Tani wapas ki (Kariger Ka Asali Naam, jaise SALMAN):");
     if (!kariger || !kariger.trim()) return;
 
     var cleanName = kariger.trim().toUpperCase();
@@ -295,7 +304,7 @@ function returnSanchaFromKariger(itemId) {
     alert("✅ " + q + " Tani Godam me wapas jud gayi!");
 }
 
-// 7. 📖 SANCHA (TANI) PASSBOOK
+// 7. 📖 SANCHA (TANI) PASSBOOK WITH EDIT & DELETE
 function viewSanchaPassbook(itemName) {
     var titleEl = document.getElementById("modal-item-title");
     if (titleEl) titleEl.textContent = "📖 Sancha / Tani Passbook: " + itemName + " (" + getKarkhanaNameById(currentSanchaKarkhanaFilter) + ")";
@@ -327,17 +336,41 @@ function viewSanchaPassbook(itemName) {
     } else {
         hist.forEach(function(r) {
             var isOut = String(r.type).indexOf("Le Gaya") !== -1 || String(r.type).indexOf("Out") !== -1;
+            var personDisplay = (r.person || "Sancha Production").trim();
+
             tbody.innerHTML += "<tr>" +
                 "<td>" + formatDateDisplay(r.date) + "</td>" +
-                "<td><strong style='color:#1e3a8a; font-size:13px;'>👤 " + (r.person || "Sancha Setup") + "</strong></td>" +
+                "<td><strong style='color:#1e3a8a; font-size:13px;'>👤 " + personDisplay + "</strong></td>" +
                 "<td>" + r.type + "</td>" +
                 "<td style='font-weight:700; color:" + (isOut ? "#dc2626" : "#059669") + "; font-size:13px;'>" + (isOut ? "-" : "+") + r.qty + " Tani</td>" +
-                "<td style='text-align:center;'><button class='delete-btn' onclick='deleteSanchaHistoryEntry(\"" + r.id + "\", \"" + itemName + "\")'>🗑️ Delete</button></td>" +
+                "<td style='text-align:center; white-space:nowrap;'>" +
+                    "<button class='edit-btn' onclick='editSanchaPersonName(\"" + r.id + "\", \"" + itemName + "\")'>✏️ Naam Badlein</button> " +
+                    "<button class='delete-btn' onclick='deleteSanchaHistoryEntry(\"" + r.id + "\", \"" + itemName + "\")'>🗑️ Delete</button>" +
+                "</td>" +
             "</tr>";
         });
     }
 
     setDisplay("item-modal", "flex");
+}
+
+// 8. PURANI ENTRY KA NAAM BADALNA (AGAR "KARIGER" LIKHA THA TO "SALMAN" KARO)
+function editSanchaPersonName(hId, itemName) {
+    var hist = safeArray(getStore("sancha_history"));
+    var entry = hist.find(function(x) { return String(x.id) === String(hId); });
+    if (!entry) return;
+
+    var newName = prompt("Is entry me Kariger ka sahi naam daalein (Jaise: SALMAN):", (entry.person || "SALMAN"));
+    if (!newName || !newName.trim()) return;
+
+    entry.person = newName.trim().toUpperCase();
+    entry.note = entry.person + " le gaya/loutaya";
+    setStore("sancha_history", hist);
+
+    viewSanchaPassbook(itemName);
+    renderSanchaTable();
+    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
+    alert("✅ Naam update hokar " + entry.person + " ho gaya!");
 }
 
 function deleteSanchaHistoryEntry(hId, itemName) {
