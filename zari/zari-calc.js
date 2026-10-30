@@ -1,12 +1,10 @@
 /* ========================================================
-   SIMPLICITY ERP - ZARI STOCK CALCULATION ENGINE
+   SIMPLICITY ERP - ZARI STOCK CALCULATION ENGINE (FIXED)
    File: zari/zari-calc.js • Developed by Farhan Jawed
-   (Multi-Godown Live Stock, Less Topi, Inter-Transfer & Returns)
 ======================================================== */
 
 var currentZariKarkhanaFilter = "k_main";
 
-// 1. LIVE ZARI STOCK STATS (MULTI-KARKHANA CALCULATION)
 function getZariItemStats(itemName, targetKarkhanaId) {
     var kId = targetKarkhanaId || currentZariKarkhanaFilter || "k_main";
     var isMain = (kId === "k_main");
@@ -22,8 +20,16 @@ function getZariItemStats(itemName, targetKarkhanaId) {
     });
     var allKarigers = (typeof sanitizeKarigerList === "function") ? sanitizeKarigerList() : [];
 
+    var uniqueInGodown = [];
+    zStock.forEach(function(z) {
+        if (!z || !z.name) return;
+        var matchK = isMain ? (!z.karkhanaId || z.karkhanaId === "k_main") : (String(z.karkhanaId) === String(kId));
+        var nL = z.name.trim().toLowerCase();
+        if (matchK && uniqueInGodown.indexOf(nL) === -1) uniqueInGodown.push(nL);
+    });
+
     if (isMain) {
-        // Main Godown: Kharid + Kariger Returns
+        // 1. Opening + Kharid
         zStock.forEach(function(z) {
             var matchK = (!z.karkhanaId || z.karkhanaId === "k_main");
             if (z && matchK && z.name && z.name.trim().toLowerCase() === nameLower) {
@@ -32,7 +38,7 @@ function getZariItemStats(itemName, targetKarkhanaId) {
             }
         });
 
-        // Main Godown se Branch ko transfer
+        // 2. Branch Transfer Out
         transfers.forEach(function(t) {
             if (t && t.itemName && t.itemName.trim().toLowerCase() === nameLower) {
                 totalGaya += (Number(t.qty) || 0);
@@ -40,7 +46,7 @@ function getZariItemStats(itemName, targetKarkhanaId) {
             }
         });
 
-        // Main Godown Karigaron ka khapat (Row-level safe check)
+        // 3. Kariger Khapat (Net Zari Minus Engine)
         allKarigers.forEach(function(k) {
             var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : [];
             sheets.forEach(function(sh) {
@@ -48,8 +54,9 @@ function getZariItemStats(itemName, targetKarkhanaId) {
                     if (!r) return;
                     var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
                     if (rowKarkhana === "k_main") {
-                        var rName = (r.zariItemName || (zStock.length > 0 ? zStock[0].name : "")).trim().toLowerCase();
-                        if (rName === nameLower) {
+                        var rName = (r.zariItemName || "").trim().toLowerCase();
+                        var isMatch = (rName === nameLower) || (!rName && (uniqueInGodown.length <= 1 || uniqueInGodown[0] === nameLower));
+                        if (isMatch) {
                             totalGaya += (Number(r.netZari) || 0);
                             totalAaya += (Number(r.retZari) || 0);
                             if (r.date) lastDate = r.date;
@@ -59,7 +66,7 @@ function getZariItemStats(itemName, targetKarkhanaId) {
             });
         });
     } else {
-        // Branch Godown: Opening + Main se Aaya + Branch Kariger Return
+        // Branch Godown
         zStock.forEach(function(z) {
             if (z && String(z.karkhanaId) === String(kId) && z.name && z.name.trim().toLowerCase() === nameLower) {
                 totalAaya += (Number(z.aaya) || 0);
@@ -81,8 +88,9 @@ function getZariItemStats(itemName, targetKarkhanaId) {
                     if (!r) return;
                     var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
                     if (String(rowKarkhana) === String(kId)) {
-                        var rName = (r.zariItemName || (zStock.length > 0 ? zStock[0].name : "")).trim().toLowerCase();
-                        if (rName === nameLower) {
+                        var rName = (r.zariItemName || "").trim().toLowerCase();
+                        var isMatch = (rName === nameLower) || (!rName && (uniqueInGodown.length <= 1 || uniqueInGodown[0] === nameLower));
+                        if (isMatch) {
                             totalGaya += (Number(r.netZari) || 0);
                             totalAaya += (Number(r.retZari) || 0);
                             if (r.date) lastDate = r.date;
