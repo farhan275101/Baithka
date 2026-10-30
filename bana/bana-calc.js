@@ -1,12 +1,10 @@
 /* ========================================================
-   SIMPLICITY ERP - BANA STOCK CALCULATION ENGINE
+   SIMPLICITY ERP - BANA STOCK CALCULATION ENGINE (FIXED)
    File: bana/bana-calc.js • Developed by Farhan Jawed
-   (Multi-Godown Live Stock, Inter-Transfer & Wastage Formula)
 ======================================================== */
 
 var currentBanaKarkhanaFilter = "k_main";
 
-// 1. LIVE BANA STOCK STATS (MULTI-KARKHANA CALCULATION)
 function getBanaItemStats(itemName, targetKarkhanaId) {
     var kId = targetKarkhanaId || currentBanaKarkhanaFilter || "k_main";
     var isMain = (kId === "k_main");
@@ -23,7 +21,7 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
     var allKarigers = (typeof sanitizeKarigerList === "function") ? sanitizeKarigerList() : [];
 
     if (isMain) {
-        // Main Godown: Kharid + Kariger Returns
+        // 1. Opening Stock + Nayi Kharid (Main Godown)
         bStock.forEach(function(b) {
             var matchK = (!b.karkhanaId || b.karkhanaId === "k_main");
             if (b && matchK && b.name && b.name.trim().toLowerCase() === nameLower) {
@@ -32,7 +30,7 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
             }
         });
 
-        // Main Godown se Branch ko gaya Maal (Transfer Out)
+        // 2. Branch ko transfer
         transfers.forEach(function(t) {
             if (t && t.itemName && t.itemName.trim().toLowerCase() === nameLower) {
                 totalGaya += (Number(t.qty) || 0);
@@ -40,7 +38,7 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
             }
         });
 
-        // Main Godown ke Karigaron ka Khapat (Bug Fixed: Row-level check)
+        // 3. Kariger Khapat (Sirf match hone par katega, bina naam ke doosre item se nahi katega)
         allKarigers.forEach(function(k) {
             var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : [];
             sheets.forEach(function(sh) {
@@ -48,7 +46,11 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
                     if (!r) return;
                     var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
                     if (rowKarkhana === "k_main") {
-                        var rName = (r.banaItemName || (bStock.length > 0 ? bStock[0].name : "")).trim().toLowerCase();
+                        var rName = (r.banaItemName || "").trim().toLowerCase();
+                        // Agar row me naam nahi hai aur godam me sirf 1 hi bana hai
+                        if (!rName && bStock.length === 1) {
+                            rName = bStock[0].name.trim().toLowerCase();
+                        }
                         if (rName === nameLower) {
                             totalGaya += (Number(r.netBana) || 0);
                             totalAaya += (Number(r.retBana) || 0);
@@ -59,7 +61,7 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
             });
         });
     } else {
-        // Branch Godown: Opening Stock + Main se Aaya Maal + Branch Kariger Return
+        // Branch Godown
         bStock.forEach(function(b) {
             if (b && String(b.karkhanaId) === String(kId) && b.name && b.name.trim().toLowerCase() === nameLower) {
                 totalAaya += (Number(b.aaya) || 0);
@@ -81,7 +83,7 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
                     if (!r) return;
                     var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
                     if (String(rowKarkhana) === String(kId)) {
-                        var rName = (r.banaItemName || (bStock.length > 0 ? bStock[0].name : "")).trim().toLowerCase();
+                        var rName = (r.banaItemName || "").trim().toLowerCase();
                         if (rName === nameLower) {
                             totalGaya += (Number(r.netBana) || 0);
                             totalAaya += (Number(r.retBana) || 0);
