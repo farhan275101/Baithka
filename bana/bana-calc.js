@@ -20,8 +20,17 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
     });
     var allKarigers = (typeof sanitizeKarigerList === "function") ? sanitizeKarigerList() : [];
 
+    // Unique names in this godown
+    var uniqueInGodown = [];
+    bStock.forEach(function(b) {
+        if (!b || !b.name) return;
+        var matchK = isMain ? (!b.karkhanaId || b.karkhanaId === "k_main") : (String(b.karkhanaId) === String(kId));
+        var nL = b.name.trim().toLowerCase();
+        if (matchK && uniqueInGodown.indexOf(nL) === -1) uniqueInGodown.push(nL);
+    });
+
     if (isMain) {
-        // 1. Opening Stock + Nayi Kharid (Main Godown)
+        // 1. Opening + Kharid
         bStock.forEach(function(b) {
             var matchK = (!b.karkhanaId || b.karkhanaId === "k_main");
             if (b && matchK && b.name && b.name.trim().toLowerCase() === nameLower) {
@@ -30,7 +39,7 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
             }
         });
 
-        // 2. Branch ko transfer
+        // 2. Branch Transfer Out
         transfers.forEach(function(t) {
             if (t && t.itemName && t.itemName.trim().toLowerCase() === nameLower) {
                 totalGaya += (Number(t.qty) || 0);
@@ -38,7 +47,7 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
             }
         });
 
-        // 3. Kariger Khapat (Sirf match hone par katega, bina naam ke doosre item se nahi katega)
+        // 3. Kariger Khapat (Net Bana Minus Engine)
         allKarigers.forEach(function(k) {
             var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : [];
             sheets.forEach(function(sh) {
@@ -47,11 +56,9 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
                     var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
                     if (rowKarkhana === "k_main") {
                         var rName = (r.banaItemName || "").trim().toLowerCase();
-                        // Agar row me naam nahi hai aur godam me sirf 1 hi bana hai
-                        if (!rName && bStock.length === 1) {
-                            rName = bStock[0].name.trim().toLowerCase();
-                        }
-                        if (rName === nameLower) {
+                        // Agar Tani row me naam nahi bhi bhara hai, to active item se minus karo
+                        var isMatch = (rName === nameLower) || (!rName && (uniqueInGodown.length <= 1 || uniqueInGodown[0] === nameLower));
+                        if (isMatch) {
                             totalGaya += (Number(r.netBana) || 0);
                             totalAaya += (Number(r.retBana) || 0);
                             if (r.date) lastDate = r.date;
@@ -84,7 +91,8 @@ function getBanaItemStats(itemName, targetKarkhanaId) {
                     var rowKarkhana = r.karkhanaId || k.karkhanaId || "k_main";
                     if (String(rowKarkhana) === String(kId)) {
                         var rName = (r.banaItemName || "").trim().toLowerCase();
-                        if (rName === nameLower) {
+                        var isMatch = (rName === nameLower) || (!rName && (uniqueInGodown.length <= 1 || uniqueInGodown[0] === nameLower));
+                        if (isMatch) {
                             totalGaya += (Number(r.netBana) || 0);
                             totalAaya += (Number(r.retBana) || 0);
                             if (r.date) lastDate = r.date;
