@@ -1,10 +1,8 @@
 /* ========================================================
-   SIMPLICITY ERP - FIREBASE CLOUD & REALTIME SYNC
+   SIMPLICITY ERP - FIREBASE CLOUD & REALTIME SYNC (FIXED)
    File: core/database.js • Developed by Farhan Jawed
-   (Live Cloud Sync, Offline Reconnect & Status Indicator)
 ======================================================== */
 
-// 1. FIREBASE CONFIGURATION
 const firebaseConfig = {
     apiKey: "AIzaSyDkLlLPFnZexLWxtvqg3UiE9XG_IclaSAk",
     authDomain: "simplicity-erp.firebaseapp.com",
@@ -18,33 +16,24 @@ const firebaseConfig = {
 
 var db = null;
 
-// Firebase initialization with safety check
 try {
     if (typeof firebase !== "undefined") {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         db = firebase.database();
-        console.log("✅ Cloud Database Connected Successfully!");
-    } else {
-        console.warn("⚠️ Firebase SDK load nahi hua (Offline Mode)");
+        console.log("✅ Cloud Connected!");
     }
 } catch (error) {
-    console.error("❌ Firebase Init Error:", error);
+    console.error("Firebase Init Error:", error);
 }
 
-// 2. LIVE SYNC STATUS BADGE (Mobile + Laptop View)
 function showSyncStatus(status) {
     var badge = document.getElementById("cloud-status-badge");
     if (!badge) return;
 
-    // Agar user purana backup viewer dekh raha hai
     if (typeof isBackupPreviewMode !== "undefined" && isBackupPreviewMode) {
         badge.className = "sync-badge";
-        badge.style.background = "#fef08a";
-        badge.style.color = "#854d0e";
-        badge.style.borderColor = "#eab308";
-        badge.innerHTML = "👁️ Preview Mode (No Sync)";
+        badge.style.background = "#fef08a"; badge.style.color = "#854d0e";
+        badge.innerHTML = "👁️ Preview Mode";
         return;
     }
 
@@ -53,27 +42,16 @@ function showSyncStatus(status) {
         badge.innerHTML = "🔄 Syncing...";
     } else if (status === "offline") {
         badge.className = "sync-badge";
-        badge.style.background = "#fff7ed";
-        badge.style.color = "#ea580c";
-        badge.style.borderColor = "#fed7aa";
+        badge.style.background = "#fff7ed"; badge.style.color = "#ea580c";
         badge.innerHTML = "🟠 Offline Mode";
-    } else if (status === "error") {
-        badge.className = "sync-badge";
-        badge.style.background = "#fef2f2";
-        badge.style.color = "#dc2626";
-        badge.style.borderColor = "#fecaca";
-        badge.innerHTML = "⚠️ Sync Error";
     } else {
-        // Online / Synced
         badge.className = "sync-badge";
-        badge.style.background = "#ecfdf5";
-        badge.style.color = "#059669";
-        badge.style.borderColor = "#a7f3d0";
+        badge.style.background = "#ecfdf5"; badge.style.color = "#059669";
         badge.innerHTML = "🟢 Cloud Synced";
     }
 }
 
-// 3. FIREBASE REALTIME LISTENER (Doosre phone/laptop me change hone par turant screen update)
+// 🔒 FIREBASE LISTENER (SESSION REVERT SHIELD FIXED)
 function initFirebaseLiveListeners() {
     if (!db || !currentUserId) return;
 
@@ -86,10 +64,14 @@ function initFirebaseLiveListeners() {
                 isRemoteUpdating = true;
                 
                 for (var k in val) {
+                    // ⚠️ ASALI FIX: Firebase ko user ka active session pichhe se palatne mat do!
+                    if (k === "app_active_session") {
+                        continue; 
+                    }
+
                     try {
                         var itemData = Array.isArray(val[k]) ? safeArray(val[k]) : val[k];
                         var fullKey = currentUserId + "_" + k;
-                        
                         APP_MEMORY_CACHE[fullKey] = itemData;
                         if (typeof idbPut === "function") idbPut(fullKey, itemData);
                         try { localStorage.setItem(fullKey, JSON.stringify(itemData)); } catch(e) {}
@@ -98,7 +80,6 @@ function initFirebaseLiveListeners() {
                 
                 isRemoteUpdating = false;
 
-                // UI Auto-Refresh (Active Section ko bina page reload kiye refresh karna)
                 if (typeof triggerActiveSectionRefresh === "function") {
                     triggerActiveSectionRefresh();
                 }
@@ -106,7 +87,5 @@ function initFirebaseLiveListeners() {
                 showSyncStatus("online");
             }
         });
-    } catch (e) {
-        console.error("Firebase Listener Error:", e);
-    }
+    } catch (e) {}
 }
