@@ -7,14 +7,14 @@
     <title>Welcome to Simplicity - ERP by Farhan Jawed</title>
     
     <!-- PWA Web App Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Simplicity">
 
-    <!-- CSS Link -->
-    <link rel="stylesheet" href="style.css">
+    <!-- CSS Link (Guaranteed Path) -->
+    <link rel="stylesheet" href="./style.css">
 
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -105,7 +105,6 @@
                 </div>
             </div>
             <div class="navbar-user-area">
-                <!-- 📅 SESSION SWITCHER -->
                 <div class="session-dropdown-wrap" style="display:inline-flex; align-items:center; gap:6px; background:#1e293b; padding:4px 8px; border-radius:6px; border:1px solid #475569;">
                     <span style="font-size:12px; color:#94a3b8; font-weight:700;">📅 Session:</span>
                     <select id="app-session-select" onchange="switchAppFinancialSession(this.value)" style="background:#0f172a; color:#38bdf8; border:1px solid #334155; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:12px; cursor:pointer;">
@@ -143,7 +142,7 @@
                         <span class="title">1. Kariger Master</span>
                         <span class="menu-badge badge-kar-btn" id="btn-total-kariger">Total: 0</span>
                     </div>
-                    <div class="menu-btn" style="border-top:4px solid #6366f1;" onclick="alert('Info Ledger Module')">
+                    <div class="menu-btn" style="border-top:4px solid #6366f1;" onclick="alert('Info Ledger')">
                         <span class="icon">📋</span>
                         <span class="title">2. Information Ledger</span>
                         <span class="menu-badge badge-info-btn" id="btn-total-info">Total: 0</span>
@@ -226,7 +225,7 @@
             </div>
 
             <!-- MODULE 1: KARIGER MASTER -->
-            <div id="kariger-section" class="module-section">
+            <div id="kariger-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
                     <h2 style="color:#0f766e; font-size:19px; font-weight:700;">🧵 Kariger Master Directory</h2>
@@ -263,7 +262,7 @@
             </div>
 
             <!-- MODULE 1B: KARIGER TANI KHATA SHEET -->
-            <div id="kariger-sheet-section" class="module-section">
+            <div id="kariger-sheet-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="openKarigerModule()">← Kariger List</button>
                     <h2 id="sheet-kariger-title" style="color:#1e3a8a; font-size:18px; font-weight:800;">Tani Khata</h2>
@@ -285,7 +284,6 @@
                     <div><label>Zari Wastage (Kg)</label><input type="number" step="0.01" id="waste-zari-input"></div>
                 </div>
 
-                <!-- ADD ROW IN TANI -->
                 <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:14px;">
                     <div class="form-row-4" style="margin-bottom:8px;">
                         <div class="input-group"><label>Tarikh</label><input type="date" id="row-date"></div>
@@ -337,7 +335,7 @@
             </div>
 
             <!-- MODULE 2: BANA STOCK -->
-            <div id="bana-section" class="module-section">
+            <div id="bana-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
                     <h2 style="color:#059669; font-size:19px; font-weight:700;">🧶 Bana Stock Master</h2>
@@ -380,7 +378,7 @@
             </div>
 
             <!-- MODULE 3: ZARI STOCK -->
-            <div id="zari-section" class="module-section">
+            <div id="zari-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
                     <h2 style="color:#ea580c; font-size:19px; font-weight:700;">✨ Zari Stock Master</h2>
@@ -423,7 +421,7 @@
             </div>
 
             <!-- MODULE 4: SAREE STOCK -->
-            <div id="saree-section" class="module-section">
+            <div id="saree-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
                     <h2 style="color:#2563eb; font-size:19px; font-weight:700;">🥻 Saree Stock (3 Registers)</h2>
@@ -461,7 +459,7 @@
             </div>
 
             <!-- MODULE 5: PAYMENTS -->
-            <div id="payment-section" class="module-section">
+            <div id="payment-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
                     <h2 style="color:#7c3aed; font-size:19px; font-weight:700;">💳 Kariger Payment & Bakaya</h2>
@@ -487,26 +485,32 @@
             </div>
 
             <!-- MODULE 6: SANCHA -->
-            <div id="sancha-section" class="module-section">
+            <div id="sancha-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
-                    <h2 style="color:#0284c7; font-size:19px; font-weight:700;">⚙️ Sancha Stock</h2>
-                    <button class="add-btn" style="background:#0284c7;" onclick="toggleAddSanchaItemForm()">+ Naya Sancha Item</button>
+                    <h2 style="color:#0284c7; font-size:19px; font-weight:700;">⚙️ Sancha (Loom Tani) Register</h2>
+                    <button class="add-btn" style="background:#0284c7;" onclick="toggleAddSanchaItemForm()">+ Sancha Par Tani Bani</button>
                 </div>
                 <div id="sancha-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:12px; overflow-x:auto;"></div>
-                <div class="filter-panel"><input type="text" id="search-sancha-input" class="search-box" placeholder="🔍 Search Sancha..." oninput="filterSancha()"></div>
+                
+                <div id="sancha-opening-box" class="summary-box" style="margin-bottom:14px; background:#f0f9ff; border:1px solid #bae6fd; border-left:5px solid #0284c7; text-align:left; padding:12px 16px;">
+                    <span style="color:#0284c7; font-weight:800; font-size:12px;">📦 TANI READY STOCK:</span>
+                    <h3 id="sancha-opening-val" style="color:#0284c7; font-size:20px; margin:4px 0;">0 Tani Tayyar Bachi Hai</h3>
+                </div>
+
+                <div class="filter-panel"><input type="text" id="search-sancha-input" class="search-box" placeholder="🔍 Search Sancha / Tani..." oninput="filterSancha()"></div>
 
                 <div id="add-sancha-item-form" class="custom-form">
                     <input type="hidden" id="sancha-edit-id">
                     <div class="form-row-4">
                         <div class="input-group"><label>Tarikh</label><input type="date" id="sancha-date"></div>
-                        <div class="input-group"><label>Sancha Item Naam</label><input type="text" id="sancha-name" placeholder="Sancha / Jacquard"></div>
-                        <div class="input-group"><label>Kul Quantity</label><input type="number" id="sancha-qty" placeholder="Qty"></div>
+                        <div class="input-group"><label>Sancha / Tani Ka Naam</label><input type="text" id="sancha-name" placeholder="Saree Quality / Design"></div>
+                        <div class="input-group"><label>Kitni Tani Bani (Qty)</label><input type="number" id="sancha-qty" placeholder="Tani Pcs"></div>
                         <div class="input-group"><label>Person / Kariger</label><input type="text" id="sancha-person" placeholder="Person name"></div>
                     </div>
                     <div style="display:flex; justify-content:flex-end; gap:8px;">
                         <button class="reset-btn" onclick="toggleAddSanchaItemForm()">Cancel</button>
-                        <button class="add-btn" id="sancha-save-btn" onclick="saveSanchaItem()">Save Sancha</button>
+                        <button class="add-btn" id="sancha-save-btn" onclick="saveSanchaItem()">Save Tani Stock</button>
                     </div>
                 </div>
 
@@ -514,7 +518,7 @@
                     <table>
                         <thead>
                             <tr style="background:#0284c7; color:white;">
-                                <th>Tarikh</th><th>Sancha Naam</th><th>Person</th><th>Kul Stock</th><th>Diya (Out)</th><th>Wapas (In)</th><th>Bacha</th><th style="text-align:center;">Action</th>
+                                <th>Tarikh</th><th>Sancha / Tani Ka Naam</th><th>Kul Tani Bani</th><th>Kaun Kariger Le Gaya (Loom Par)</th><th>Bachi Tani (Ready Stock)</th><th style="text-align:center;">Action</th>
                             </tr>
                         </thead>
                         <tbody id="sancha-table-body"></tbody>
@@ -523,7 +527,7 @@
             </div>
 
             <!-- MODULE 7: JOB WORK -->
-            <div id="jobwork-section" class="module-section">
+            <div id="jobwork-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
                     <h2 style="color:#0d9488; font-size:19px; font-weight:700;">✂️ Job Work Hub (Cutting & Calender)</h2>
@@ -534,7 +538,6 @@
                     </div>
                 </div>
 
-                <!-- WORKERS VIEW -->
                 <div id="jw-workers-view">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                         <h3 id="jw-workers-title" style="font-size:16px; color:#1e3a8a;">Workers List</h3>
@@ -573,7 +576,6 @@
                     </div>
                 </div>
 
-                <!-- SHEET VIEW -->
                 <div id="jw-sheet-view" style="display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <button class="back-btn" onclick="openCuttingModule()">← Workers List</button>
@@ -597,7 +599,6 @@
                     </div>
                 </div>
 
-                <!-- DUKAN VIEW -->
                 <div id="jw-dukan-view" style="display:none;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <button class="back-btn" onclick="openCuttingModule()">← Hub Wapas</button>
@@ -629,7 +630,7 @@
             </div>
 
             <!-- MODULE 8: ADMIN CONTROL -->
-            <div id="admin-section" class="module-section">
+            <div id="admin-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
                     <h2 style="color:#d97706; font-size:19px; font-weight:700;">👑 Admin Control Panel</h2>
@@ -655,7 +656,6 @@
     </div>
 
     <!-- 3. MODALS (POPUPS) -->
-    <!-- PASSBOOK MODAL -->
     <div id="item-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
@@ -675,7 +675,6 @@
         </div>
     </div>
 
-    <!-- PROFILE MODAL -->
     <div id="profile-modal" class="modal-overlay">
         <div class="modal-card" style="max-width:440px;">
             <div class="modal-header">
@@ -693,7 +692,6 @@
         </div>
     </div>
 
-    <!-- SESSION CLOSING MODAL -->
     <div id="session-closing-modal" class="modal-overlay">
         <div class="modal-card" style="max-width:480px;">
             <div class="modal-header">
@@ -714,7 +712,6 @@
         </div>
     </div>
 
-    <!-- SESSION TRANSFER PROGRESS MODAL -->
     <div id="session-transfer-modal" class="modal-overlay">
         <div class="modal-card" style="max-width:540px;">
             <div class="modal-header">
@@ -753,22 +750,17 @@
         </div>
     </div>
 
-    <!-- ========================================================
-         4. ALL 15 MODULAR SCRIPTS (IN EXACT CORRECT ORDER)
-         ======================================================== -->
-    <!-- CORE -->
+    <!-- 4. ALL 15 MODULAR SCRIPTS -->
     <script src="core/utils.js"></script>
     <script src="core/storage.js"></script>
     <script src="core/database.js"></script>
     <script src="core/karkhana.js"></script>
 
-    <!-- AUTH & SESSION -->
     <script src="auth/auth.js"></script>
     <script src="auth/profile.js"></script>
     <script src="session/session.js"></script>
     <script src="session/session-closing.js"></script>
 
-    <!-- MODULES -->
     <script src="kariger/kariger-calc.js"></script>
     <script src="kariger/kariger-ui.js"></script>
     <script src="bana/bana-calc.js"></script>
@@ -787,11 +779,10 @@
     <script src="payment/payment.js"></script>
     <script src="daybook/daybook.js"></script>
 
-    <!-- SYSTEM & ADMIN -->
     <script src="backup/backup.js"></script>
     <script src="admin/admin.js"></script>
 
-    <!-- 5. APP STARTUP CONTROLLER -->
+    <!-- 5. APP CONTROLLER -->
     <script>
         window.onload = function() {
             if (typeof clearMemoryCache === "function") clearMemoryCache();
@@ -813,7 +804,6 @@
             var errMsg = document.getElementById("login-error");
             if (errMsg) errMsg.style.display = "none";
 
-            // Laptop Enter Key support
             if (idInp) {
                 idInp.addEventListener("keypress", function(e) {
                     if (e.key === "Enter" && typeof handleLogin === "function") handleLogin();
