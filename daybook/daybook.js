@@ -1,11 +1,21 @@
 /* ========================================================
    SIMPLICITY ERP - ROZANA DAY-BOOK & DASHBOARD ENGINE
    File: daybook/daybook.js • Developed by Farhan Jawed
-   (Bana, Zari, Saree, Cash In/Out Register & Live Badges)
+   (Bana, Zari, Saree, Cash & Sancha Register + Double Badges)
 ======================================================== */
 
 var currentDayBookTab = "bana";
 var badgeCalculationTimer = null;
+
+function setElementText(id, v) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = (v !== undefined && v !== null) ? v : "";
+}
+
+function setElementHTML(id, html) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = (html !== undefined && html !== null) ? html : "";
+}
 
 function setDashboardToday() {
     var dateInput = document.getElementById("dash-day-date");
@@ -15,7 +25,7 @@ function setDashboardToday() {
 
 function switchDayBookTab(tab) {
     currentDayBookTab = tab;
-    ["bana", "zari", "saree", "payment"].forEach(function(t) {
+    ["bana", "zari", "saree", "payment", "sancha"].forEach(function(t) {
         var el = document.getElementById("btn-tab-" + t);
         if (el) {
             if (t === tab) el.classList.add("active");
@@ -41,9 +51,9 @@ function renderDashboardDayBook() {
     bStock.forEach(function(b) { if (b && b.date === d) bIn += (Number(b.aaya) || 0); });
     zStock.forEach(function(z) { if (z && z.date === d) zIn += (Number(z.aaya) || 0); });
 
-    var karList = sanitizeKarigerList();
+    var karList = typeof sanitizeKarigerList === "function" ? sanitizeKarigerList() : safeArray(getStore("kariger_list"));
     karList.forEach(function(k) {
-        var sheets = getKarigerSheets(k.id);
+        var sheets = typeof getKarigerSheets === "function" ? getKarigerSheets(k.id) : [];
         sheets.forEach(function(sh) {
             safeArray(sh.rows).forEach(function(r) {
                 if (r && r.date === d) {
@@ -57,25 +67,31 @@ function renderDashboardDayBook() {
         });
     });
 
-    // Saree Daybook calculation (Bug fixed: Consistent filtering)
+    // Saree Daybook Calculation
     var sH = safeArray(getStore("saree_history")).filter(function(h) {
-        if (!h || h.date !== d) return false;
-        var typeStr = String(h.type || "");
-        var isTransfer = (typeStr.indexOf("Transfer") !== -1);
-        var isJobWork = (typeStr.indexOf("Cutting") !== -1) || (typeStr.indexOf("Calender") !== -1);
-        return !isTransfer && !isJobWork;
+        return h && h.date === d;
     });
-
     var sIn = 0, sOut = 0;
     sH.forEach(function(h) {
-        if (String(h.type).indexOf("In") !== -1) sIn += (Number(h.pcs) || 0);
-        else sOut += (Number(h.pcs) || 0);
+        sIn += (Number(h.aai || h.pcs || 0));
+        sOut += (Number(h.gai || 0));
+    });
+
+    // Sancha (Tani & Chukka) Daybook Calculation
+    var sanchaHist = safeArray(getStore("sancha_history")).filter(function(h) {
+        return h && h.date === d;
+    });
+    var sanchaIn = 0, sanchaOut = 0;
+    sanchaHist.forEach(function(h) {
+        sanchaIn += (Number(h.aaya || 0));
+        sanchaOut += (Number(h.gaya || 0));
     });
 
     setElementText("sub-day-bana", "In: +" + bIn.toFixed(1) + " | Out: -" + bOut.toFixed(1));
     setElementText("sub-day-zari", "In: +" + zIn.toFixed(1) + " | Out: -" + zOut.toFixed(1));
     setElementText("sub-day-saree", "In: +" + sIn + " | Out: -" + sOut);
     setElementText("sub-day-payment", "Diya: ₹ " + pOut.toFixed(0));
+    setElementText("sub-day-sancha", "In: +" + sanchaIn.toFixed(1) + " | Out: -" + sanchaOut.toFixed(1));
 
     // TAB 1: BANA
     if (currentDayBookTab === "bana") {
@@ -87,10 +103,10 @@ function renderDashboardDayBook() {
             }
         });
         karList.forEach(function(k) {
-            getKarigerSheets(k.id).forEach(function(sh) {
+            (typeof getKarigerSheets === "function" ? getKarigerSheets(k.id) : []).forEach(function(sh) {
                 safeArray(sh.rows).forEach(function(r) {
                     if (r && r.date === d) {
-                        var itName = r.banaItemName || "Bana";
+                        var itName = r.banaItemName || r.banaItem || "Bana";
                         if (Number(r.netBana) > 0) bRows.push({ name: itName, desc: k.name + " (" + sh.title + ")", inQty: 0, outQty: Number(r.netBana) });
                         if (Number(r.retBana) > 0) bRows.push({ name: itName, desc: k.name + " (" + sh.title + ") Return", inQty: Number(r.retBana), outQty: 0 });
                     }
@@ -119,10 +135,10 @@ function renderDashboardDayBook() {
             }
         });
         karList.forEach(function(k) {
-            getKarigerSheets(k.id).forEach(function(sh) {
+            (typeof getKarigerSheets === "function" ? getKarigerSheets(k.id) : []).forEach(function(sh) {
                 safeArray(sh.rows).forEach(function(r) {
                     if (r && r.date === d) {
-                        var itName = r.zariItemName || "Zari";
+                        var itName = r.zariItemName || r.zariItem || "Zari";
                         if (Number(r.netZari) > 0) zRows.push({ name: itName, desc: k.name + " (" + sh.title + ")", inQty: 0, outQty: Number(r.netZari) });
                         if (Number(r.retZari) > 0) zRows.push({ name: itName, desc: k.name + " (" + sh.title + ") Return", inQty: Number(r.retZari), outQty: 0 });
                     }
@@ -149,8 +165,9 @@ function renderDashboardDayBook() {
         } else {
             var sBuf = "";
             sH.forEach(function(h) {
-                var isA = String(h.type).indexOf("In") !== -1;
-                sBuf += "<tr><td><strong>" + h.name + "</strong></td><td>" + (h.kariger || "-") + "</td><td style='color:#059669; font-weight:700;'>" + (isA ? ("+" + h.pcs + " Pcs") : "-") + "</td><td style='color:#dc2626; font-weight:700;'>" + (!isA ? ("-" + h.pcs + " Pcs") : "-") + "</td><td>" + (h.note || "-") + "</td></tr>";
+                var inQ = Number(h.aai || h.pcs || 0);
+                var outQ = Number(h.gai || 0);
+                sBuf += "<tr><td><strong>" + (h.sareeName || h.name || "Saree") + "</strong></td><td>" + (h.karigerName || h.kariger || "-") + "</td><td style='color:#059669; font-weight:700;'>" + (inQ > 0 ? ("+" + inQ + " Pcs") : "-") + "</td><td style='color:#dc2626; font-weight:700;'>" + (outQ > 0 ? ("-" + outQ + " Pcs") : "-") + "</td><td>" + (h.typeLabel || h.note || "Fresh Saree") + "</td></tr>";
             });
             tbody.innerHTML = sBuf;
         }
@@ -161,7 +178,7 @@ function renderDashboardDayBook() {
         thead.innerHTML = "<tr style='background:#7c3aed; color:white;'><th>Kariger</th><th>Tani / Vivran</th><th>📤 Bhugtan Diya</th></tr>";
         var pRows = [];
         karList.forEach(function(k) {
-            getKarigerSheets(k.id).forEach(function(sh) {
+            (typeof getKarigerSheets === "function" ? getKarigerSheets(k.id) : []).forEach(function(sh) {
                 safeArray(sh.rows).forEach(function(r) {
                     if (r && r.date === d && Number(r.paid) > 0) {
                         pRows.push({ kariger: k.name, tani: sh.title, amount: Number(r.paid) });
@@ -180,52 +197,102 @@ function renderDashboardDayBook() {
             tbody.innerHTML = pBuf;
         }
         tfoot.innerHTML = "<tr><td colspan='2'><strong>Total Rozana Bhugtan:</strong></td><td><strong style='color:#dc2626;'>- ₹ " + pOut.toFixed(2) + "</strong></td></tr>";
+
+    // TAB 5: SANCHA (TANI & CHUKKA REGISTER)
+    } else if (currentDayBookTab === "sancha") {
+        thead.innerHTML = "<tr style='background:#0284c7; color:white;'><th>Item (Category)</th><th>Kariger / Vivran</th><th>📥 Aaya (In)</th><th>📤 Gaya (Out)</th></tr>";
+        if (!sanchaHist.length) {
+            tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:15px; color:#888;'>Is tarikh me Sancha (Tani / Chukka) ki koi entry nahi hai.</td></tr>";
+        } else {
+            var scBuf = "";
+            sanchaHist.forEach(function(h) {
+                var catBadge = (h.category === "chukka") ? "<span class='badge-blue' style='background:#ede9fe; color:#6d28d9; font-size:10px;'>⚙️ Chukka</span>" : "<span class='badge-blue' style='font-size:10px;'>🧵 Tani</span>";
+                var inQ = Number(h.aaya || h.qty || 0);
+                var outQ = Number(h.gaya || 0);
+                scBuf += "<tr>" +
+                    "<td><strong>" + (h.name || "Sancha") + "</strong> " + catBadge + "</td>" +
+                    "<td>" + (h.kariger ? ("👤 " + h.kariger) : (h.type || "Godam Purchase")) + "</td>" +
+                    "<td style='color:#059669; font-weight:700;'>" + (inQ > 0 ? ("+" + inQ.toFixed(2) + " Kg") : "-") + "</td>" +
+                    "<td style='color:#dc2626; font-weight:700;'>" + (outQ > 0 ? ("-" + outQ.toFixed(2) + " Kg") : "-") + "</td>" +
+                "</tr>";
+            });
+            tbody.innerHTML = scBuf;
+        }
+        tfoot.innerHTML = "<tr><td colspan='2'><strong>Total Rozana Sancha:</strong></td><td><strong style='color:#059669;'>+" + sanchaIn.toFixed(2) + " Kg</strong></td><td><strong style='color:#dc2626;'>-" + sanchaOut.toFixed(2) + " Kg</strong></td></tr>";
     }
 }
 
-// 2. DASHBOARD TOTAL BADGES ENGINE
+// 2. DASHBOARD TOTAL BADGES ENGINE (PAYMENT & SANCHA DOUBLE BADGES)
 function updateDashboardBadgeTotals() {
-    var karList = sanitizeKarigerList();
+    var karList = typeof sanitizeKarigerList === "function" ? sanitizeKarigerList() : safeArray(getStore("kariger_list"));
     setElementText("btn-total-kariger", "Total: " + karList.length);
     setElementText("btn-total-info", "Total: " + safeArray(getStore("info_ledger")).length);
 
     var ts = 0;
-    safeArray(getStore("saree_stock")).forEach(function(s) { if (s) ts += (Number(s.pcs) || 0); });
+    var sH = safeArray(getStore("saree_history")).filter(function(x) { return (x.type || "fresh") === "fresh"; });
+    if (sH.length) {
+        sH.forEach(function(s) { ts += (Number(s.aai || 0) - Number(s.gai || 0)); });
+    } else {
+        safeArray(getStore("saree_stock")).forEach(function(s) { if (s) ts += (Number(s.pcs) || 0); });
+    }
     setElementText("btn-total-saree", "Stock: " + ts + " Pcs");
 
     if (badgeCalculationTimer) clearTimeout(badgeCalculationTimer);
 
     badgeCalculationTimer = setTimeout(function() {
+        // 1. Bana Bacha
         var tb = 0, seenBana = [];
         safeArray(getStore("bana_stock")).forEach(function(b) {
             if (b && b.name) {
                 var nLow = b.name.trim().toLowerCase();
                 if (seenBana.indexOf(nLow) === -1) {
                     seenBana.push(nLow);
-                    try { tb += Number(getBanaItemStats(b.name, "k_main").bacha || 0); } catch(e) {}
+                    try { tb += Number(getBanaItemStats(b.name, "k_main").bacha || 0); } catch(e) { tb += Number(b.bacha || 0); }
                 }
             }
         });
         setElementText("btn-total-bana", "Bacha: " + tb.toFixed(2) + " Kg");
 
+        // 2. Zari Bacha
         var tz = 0, seenZari = [];
         safeArray(getStore("zari_stock")).forEach(function(z) {
             if (z && z.name) {
                 var nLow = z.name.trim().toLowerCase();
                 if (seenZari.indexOf(nLow) === -1) {
                     seenZari.push(nLow);
-                    try { tz += Number(getZariItemStats(z.name, "k_main").bacha || 0); } catch(e) {}
+                    try { tz += Number(getZariItemStats(z.name, "k_main").bacha || 0); } catch(e) { tz += Number(z.bacha || 0); }
                 }
             }
         });
         setElementText("btn-total-zari", "Bacha: " + tz.toFixed(2) + " Kg");
 
+        // 3. Payment Badge (Diya & Baki aamne-saamne)
         var totalBaki = 0;
+        var totalDiya = 0;
         karList.forEach(function(k) {
-            var fin = getKarigerFinanceSummary(k.id);
-            totalBaki += fin.currentBakaya;
+            var sheets = typeof getKarigerSheets === "function" ? getKarigerSheets(k.id) : [];
+            var curSheet = (sheets && sheets.length) ? sheets[sheets.length - 1] : null;
+            if (curSheet && typeof calculateSheetTotals === "function") {
+                var c = calculateSheetTotals(curSheet);
+                totalDiya += Number(c.totPaid || 0);
+                totalBaki += Number(c.remainingAmt || 0);
+            }
         });
-        setElementText("btn-total-payment", "Baki: ₹ " + totalBaki.toFixed(0));
+        setElementHTML("btn-total-payment", "<span style='color:#059669; font-weight:bold;'>Diya: ₹ " + totalDiya.toFixed(0) + "</span> • <span style='color:#dc2626; font-weight:bold;'>Baki: ₹ " + totalBaki.toFixed(0) + "</span>");
+
+        // 4. Sancha Badge (Tani & Chukka aamne-saamne)
+        var totTani = 0, totChukka = 0;
+        safeArray(getStore("sancha_items")).forEach(function(s) {
+            if (!s) return;
+            var cat = (s.category || "tani").toLowerCase();
+            var bacha = Number(s.bacha !== undefined ? s.bacha : (s.aaya || 0));
+            if (cat === "chukka") {
+                totChukka += bacha;
+            } else {
+                totTani += bacha;
+            }
+        });
+        setElementHTML("btn-total-sancha", "<span style='color:#0284c7; font-weight:bold;'>🧵 Tani: " + totTani.toFixed(1) + " Kg</span> • <span style='color:#7c3aed; font-weight:bold;'>⚙️ Chukka: " + totChukka.toFixed(1) + " Kg</span>");
     }, 60);
 }
 
