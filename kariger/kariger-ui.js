@@ -369,7 +369,7 @@ function saveCurrentSheetConfig() {
     renderSheetRows(sh);
 }
 
-// 5. SAVE LINE ROW (LESS TP & TOPI MINUS + REAL STOCK DEDUCTION IN KG)
+// 5. SAVE LINE ROW (LESS TP & TOPI MINUS + STOCK UPDATE)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
@@ -394,7 +394,6 @@ function saveTaniRow() {
     var banaItemName = (document.getElementById("line-bana-name") && document.getElementById("line-bana-name").value || "").trim();
     var zariItemName = (document.getElementById("line-zari-name") && document.getElementById("line-zari-name").value || "").trim();
 
-    // NET FORMULAS
     var nBana = Math.max(0, bCone - bLess);
     var nZari = Math.max(0, zQty - topi);
     var rowId = "row_" + Date.now();
@@ -423,14 +422,14 @@ function saveTaniRow() {
     sh.rows.push(newRow);
     saveKarigerSheets(activeKarigerId, sheets);
 
-    // 1. Saree Stock
+    // Saree Stock
     if (s > 0) {
         var sStock = safeArray(getStore("saree_stock"));
         sStock.push({ id: "saree_" + Date.now(), refId: rowId, date: d, pcs: s });
         setStore("saree_stock", sStock);
     }
 
-    // 2. Bana Stock: Net Bana Minus (-), Ret Bana Plus (+)
+    // Bana Stock
     if (banaItemName && (nBana > 0 || retB > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
         var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === banaItemName.toLowerCase(); });
@@ -442,7 +441,7 @@ function saveTaniRow() {
         }
     }
 
-    // 3. Zari Stock: Net Zari Minus (-), Ret Zari Plus (+)
+    // Zari Stock
     if (zariItemName && (nZari > 0 || retZ > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === zariItemName.toLowerCase(); });
@@ -454,7 +453,7 @@ function saveTaniRow() {
         }
     }
 
-    // 4. Sancha Stock: Tani Wazan (Kg) seedhe Minus (-)
+    // Sancha Stock
     if (sanchaName && taniWazan > 0) {
         var sStock = safeArray(getStore("sancha_items"));
         var sFound = sStock.find(function(x) { return x && x.name && x.name.toLowerCase() === sanchaName.toLowerCase(); });
@@ -465,7 +464,7 @@ function saveTaniRow() {
         }
     }
 
-    // Form Reset
+    // Reset Form
     setVal("row-saree", "");
     setVal("row-cone", "");
     setVal("row-lesstp", "");
@@ -532,26 +531,36 @@ function deleteTaniRow(idx) {
     alert("🗑️ Line delete ho gayi!");
 }
 
-// 6. RENDER ROWS (11 COLUMNS)
+// 6. RENDER ROWS + FOOTER TOTALS + 3 SUMMARY CARDS
 function renderSheetRows(sh) {
     var tbody = document.getElementById("sheet-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
     var rows = safeArray(sh.rows);
 
+    var totS = 0, totW = 0, totB = 0, totZ = 0, totP = 0, totRB = 0, totRZ = 0;
+
     if (!rows.length) {
         tbody.innerHTML = "<tr><td colspan='11' style='text-align:center; padding:15px; color:#888;'>Is Tani me koi entry nahi hai.</td></tr>";
     } else {
         rows.forEach(function(r, idx) {
             if (!r) return;
+            totS += (Number(r.saree) || 0);
+            totW += (Number(r.taniWazan) || 0);
+            totB += (Number(r.netBana) || 0);
+            totZ += (Number(r.netZari) || 0);
+            totP += (Number(r.paid) || 0);
+            totRB += (Number(r.retBana) || 0);
+            totRZ += (Number(r.retZari) || 0);
+
             tbody.innerHTML += "<tr>" +
                 "<td>" + (r.date || "-") + "</td>" +
                 "<td><strong>" + (r.saree || 0) + "</strong></td>" +
                 "<td>" + (r.sancha || "-") + "</td>" +
                 "<td>" + (r.taniName || "-") + "</td>" +
                 "<td>" + (r.taniWazan || "-") + "</td>" +
-                "<td><strong style='color:#059669;'>" + (r.netBana || 0) + "</strong></td>" +
-                "<td><strong style='color:#ea580c;'>" + (r.netZari || 0) + "</strong></td>" +
+                "<td><strong style='color:#059669;'>" + (r.netBana ? Number(r.netBana).toFixed(2) : "-") + "</strong></td>" +
+                "<td><strong style='color:#ea580c;'>" + (r.netZari ? Number(r.netZari).toFixed(2) : "-") + "</strong></td>" +
                 "<td style='color:#059669; font-weight:700;'>₹ " + (r.paid || 0) + "</td>" +
                 "<td>" + (r.retBana || 0) + "</td>" +
                 "<td>" + (r.retZari || 0) + "</td>" +
@@ -560,10 +569,43 @@ function renderSheetRows(sh) {
         });
     }
 
+    // 1. Table Footer Totals
+    setText("tot-saree", totS);
+    setText("tot-tani-wazan", totW.toFixed(2));
+    setText("tot-bana-net", totB.toFixed(2));
+    setText("tot-zari-net", totZ.toFixed(2));
+    setText("tot-paid", "₹ " + totP);
+    setText("tot-ret-bana", totRB.toFixed(2));
+    setText("tot-ret-zari", totRZ.toFixed(2));
+
+    // 2. Three Detailed Summary Cards
     var c = calculateSheetTotals(sh);
-    setText("calc-rem-bana", c.remainingBana + " Kg");
-    setText("calc-rem-zari", c.remainingZari + " Kg");
-    setText("calc-rem-amt", "₹ " + c.remainingAmt);
+
+    // Mazdoori Hisab
+    setText("calc-tot-saree", c.totSaree);
+    setText("calc-tot-lott", "- " + c.totLott);
+    setText("calc-net-saree", c.netSaree);
+    setText("calc-bani-rate", "₹ " + (sh.rateBani !== undefined ? sh.rateBani : 240));
+    setText("calc-gross-bani", "₹ " + c.grossBani.toFixed(2));
+    setText("calc-last-tani-bani", "+ ₹ " + (sh.pichlaBani || 0));
+    setText("calc-tot-paid", "- ₹ " + c.totPaid.toFixed(2));
+    setText("calc-remaining-amt", "₹ " + c.remainingAmt.toFixed(2));
+
+    // Bana Hisab
+    setText("calc-last-tani-bana", (sh.pichlaBana || 0));
+    setText("calc-tot-bana", c.totBana.toFixed(2));
+    setText("calc-ret-bana", "- " + c.retBana.toFixed(2));
+    setText("calc-bana-consumption", c.banaConsumption.toFixed(2));
+    setText("calc-bana-wastage", "- " + c.banaWaste.toFixed(2));
+    setText("calc-remaining-bana", c.remainingBana.toFixed(2));
+
+    // Zari Hisab
+    setText("calc-last-tani-zari", (sh.pichlaZari || 0));
+    setText("calc-tot-zari", c.totZari.toFixed(2));
+    setText("calc-ret-zari", "- " + c.retZari.toFixed(2));
+    setText("calc-zari-consumption", c.zariConsumption.toFixed(2));
+    setText("calc-zari-wastage", "- " + c.zariWaste.toFixed(2));
+    setText("calc-remaining-zari", c.remainingZari.toFixed(2));
 }
 
 function sendKarigerWhatsAppParchi() {
