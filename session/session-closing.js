@@ -1,7 +1,7 @@
 /* ========================================================
    SIMPLICITY ERP - 5-STAGE SEQUENTIAL YEAR-END CLOSING
    File: session/session-closing.js • Developed by Farhan Jawed
-   (Accurate Opening Stock + Firebase Lock + Non-Freezing Chunks)
+   (Zero-Minus Opening Stock + Firebase Cloud Lock + 25 Chunks)
 ======================================================== */
 
 var pendingTransferNewSession = null;
@@ -128,101 +128,46 @@ function processNextKarigerChunk(curSess, newSess) {
     }
 }
 
-// STAGE 2: SAREE STOCK
+// STAGE 2: SAREE STOCK (Opening Stock in saree_history)
 function runStage2_SareeStock(curSess, newSess) {
     var rawHistory = safeArray(getStore("saree_history"));
-    var freshMap = {}, finMap = {}, lottMap = {};
-
-    rawHistory.forEach(function(h) {
-        if (!h) return;
-        var t = (h.type || "fresh").toLowerCase();
-        var sName = (h.sareeName || h.name || "Saree").trim();
-        var kName = (h.karigerName || h.kariger || "Karkhana").trim();
-        var kId = h.karkhanaId || "k_main";
-        var key = sName + "___" + kName + "___" + kId;
-
-        var inQ = Number(h.aai !== undefined ? h.aai : (h.pcs || 0));
-        var outQ = Number(h.gai || 0);
-        var diff = inQ - outQ;
-
-        if (t === "fresh") freshMap[key] = (freshMap[key] || 0) + diff;
-        else if (t === "finished") finMap[key] = (finMap[key] || 0) + diff;
-        else if (t === "lott") lottMap[key] = (lottMap[key] || 0) + diff;
-    });
 
     stage2_newSareeHistory = [];
     stage2_totFreshPcs = 0;
     stage2_totFinPcs = 0;
     stage2_totLottPcs = 0;
 
-    for (var kf in freshMap) {
-        var bachi = Math.max(0, freshMap[kf]);
-        if (bachi > 0) {
-            stage2_totFreshPcs += bachi;
-            var parts = kf.split("___");
-            stage2_newSareeHistory.push({
-                id: "saree_open_f_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-                date: getTodayDate(),
-                sareeName: parts[0],
-                karigerName: parts[1],
-                kariger: parts[1],
-                karkhanaId: parts[2] || "k_main",
-                type: "fresh",
-                typeLabel: "📦 Opening Stock (" + curSess + " Se Aaya)",
-                aai: bachi,
-                gai: 0,
-                isOut: false,
-                isOpening: true,
-                note: "Opening Stock"
-            });
-        }
-    }
+    // Use groupSareeStockByTab for accurate Bacha Pcs
+    var tabs = ["fresh", "finished", "lott"];
+    tabs.forEach(function(tb) {
+        var rows = (typeof groupSareeStockByTab === "function") 
+            ? groupSareeStockByTab(rawHistory, tb, "all") 
+            : [];
 
-    for (var kfin in finMap) {
-        var bachiFin = Math.max(0, finMap[kfin]);
-        if (bachiFin > 0) {
-            stage2_totFinPcs += bachiFin;
-            var partsFin = kfin.split("___");
-            stage2_newSareeHistory.push({
-                id: "saree_open_fin_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-                date: getTodayDate(),
-                sareeName: partsFin[0],
-                karigerName: partsFin[1],
-                kariger: partsFin[1],
-                karkhanaId: partsFin[2] || "k_main",
-                type: "finished",
-                typeLabel: "📦 Opening Finished (" + curSess + " Se Aaya)",
-                aai: bachiFin,
-                gai: 0,
-                isOut: false,
-                isOpening: true,
-                note: "Opening Finished"
-            });
-        }
-    }
+        rows.forEach(function(r) {
+            if (r.bachi > 0) {
+                if (tb === "fresh") stage2_totFreshPcs += r.bachi;
+                else if (tb === "finished") stage2_totFinPcs += r.bachi;
+                else if (tb === "lott") stage2_totLottPcs += r.bachi;
 
-    for (var kl in lottMap) {
-        var bachiLott = Math.max(0, lottMap[kl]);
-        if (bachiLott > 0) {
-            stage2_totLottPcs += bachiLott;
-            var partsL = kl.split("___");
-            stage2_newSareeHistory.push({
-                id: "saree_open_l_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-                date: getTodayDate(),
-                sareeName: partsL[0],
-                karigerName: partsL[1],
-                kariger: partsL[1],
-                karkhanaId: partsL[2] || "k_main",
-                type: "lott",
-                typeLabel: "📦 Opening Damage/Lott (" + curSess + " Se Aaya)",
-                aai: bachiLott,
-                gai: 0,
-                isOut: false,
-                isOpening: true,
-                note: "Opening Lott"
-            });
-        }
-    }
+                stage2_newSareeHistory.push({
+                    id: "saree_open_" + tb + "_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                    date: getTodayDate(),
+                    sareeName: r.sareeName,
+                    karigerName: r.karigerName,
+                    kariger: r.karigerName,
+                    karkhanaId: r.karkhanaId || "k_main",
+                    type: tb,
+                    typeLabel: "📦 Opening Stock (" + curSess + " Se Aaya)",
+                    aai: r.bachi,
+                    gai: 0,
+                    isOut: false,
+                    isOpening: true,
+                    note: "Opening Stock"
+                });
+            }
+        });
+    });
 
     var bar2 = document.getElementById("stage-bar-2");
     var badge2 = document.getElementById("stage-badge-2");
@@ -236,76 +181,73 @@ function runStage2_SareeStock(curSess, newSess) {
     setTimeout(function() { runStage3_BanaZariStock(curSess, newSess); }, 150);
 }
 
-// STAGE 3: BANA & ZARI STOCK FREEZE
+// STAGE 3: BANA & ZARI STOCK (Exact Formula from bana-calc & zari-calc)
 function runStage3_BanaZariStock(curSess, newSess) {
-    var karkhanas = safeArray(getStore("karkhana_list"));
-    if (!karkhanas.length) karkhanas = [{ id: "k_main", name: "Main Godown", isDefault: true }];
-
+    // 1. BANA OPENING
     stage3_newBanaStock = [];
     var banaItems = safeArray(getStore("bana_stock"));
     var seenBana = [];
 
     banaItems.forEach(function(b) {
         if (!b || !b.name) return;
-        var nLow = b.name.trim().toLowerCase();
-        if (seenBana.indexOf(nLow) === -1) {
-            seenBana.push(nLow);
-            karkhanas.forEach(function(k) {
-                var bacha = 0;
-                if (typeof getBanaItemStats === "function") {
-                    try { bacha = Number(getBanaItemStats(b.name, k.id).bacha || 0); } catch(e) {}
-                } else {
-                    bacha = Number(b.bacha || b.aaya || 0);
-                }
-                if (bacha > 0) {
-                    stage3_newBanaStock.push({
-                        id: "bana_open_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-                        name: b.name.trim(),
-                        date: getTodayDate(),
-                        aaya: bacha,
-                        openingAaya: bacha,
-                        gaya: 0,
-                        bacha: bacha,
-                        karkhanaId: k.id,
-                        isOpening: true,
-                        note: "📦 Opening Stock (" + curSess + " Se Aaya)"
-                    });
-                }
-            });
+        var kid = b.karkhanaId || "k_main";
+        var key = b.name.trim().toLowerCase() + "___" + kid;
+
+        if (seenBana.indexOf(key) === -1) {
+            seenBana.push(key);
+            var stats = (typeof getBanaItemStats === "function") 
+                ? getBanaItemStats(b.name.trim(), kid) 
+                : { bacha: Number(b.bacha || b.aaya || 0) };
+
+            var bachaVal = Number(stats.bacha || 0);
+            if (bachaVal > 0) {
+                stage3_newBanaStock.push({
+                    id: "bana_open_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                    name: b.name.trim(),
+                    date: getTodayDate(),
+                    aaya: bachaVal,          // 👈 Exact Positive Opening Stock
+                    openingAaya: bachaVal,
+                    gaya: 0,
+                    bacha: bachaVal,
+                    karkhanaId: kid,
+                    isOpening: true,
+                    note: "📦 Opening Stock (" + curSess + " Se Aaya)"
+                });
+            }
         }
     });
 
+    // 2. ZARI OPENING
     stage3_newZariStock = [];
     var zariItems = safeArray(getStore("zari_stock"));
     var seenZari = [];
 
     zariItems.forEach(function(z) {
         if (!z || !z.name) return;
-        var nLowZ = z.name.trim().toLowerCase();
-        if (seenZari.indexOf(nLowZ) === -1) {
-            seenZari.push(nLowZ);
-            karkhanas.forEach(function(k) {
-                var bachaZ = 0;
-                if (typeof getZariItemStats === "function") {
-                    try { bachaZ = Number(getZariItemStats(z.name, k.id).bacha || 0); } catch(e) {}
-                } else {
-                    bachaZ = Number(z.bacha || z.aaya || 0);
-                }
-                if (bachaZ > 0) {
-                    stage3_newZariStock.push({
-                        id: "zari_open_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-                        name: z.name.trim(),
-                        date: getTodayDate(),
-                        aaya: bachaZ,
-                        openingAaya: bachaZ,
-                        gaya: 0,
-                        bacha: bachaZ,
-                        karkhanaId: k.id,
-                        isOpening: true,
-                        note: "📦 Opening Stock (" + curSess + " Se Aaya)"
-                    });
-                }
-            });
+        var kid = z.karkhanaId || "k_main";
+        var key = z.name.trim().toLowerCase() + "___" + kid;
+
+        if (seenZari.indexOf(key) === -1) {
+            seenZari.push(key);
+            var statsZ = (typeof getZariItemStats === "function") 
+                ? getZariItemStats(z.name.trim(), kid) 
+                : { bacha: Number(z.bacha || z.aaya || 0) };
+
+            var bachaValZ = Number(statsZ.bacha || 0);
+            if (bachaValZ > 0) {
+                stage3_newZariStock.push({
+                    id: "zari_open_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                    name: z.name.trim(),
+                    date: getTodayDate(),
+                    aaya: bachaValZ,         // 👈 Exact Positive Opening Stock
+                    openingAaya: bachaValZ,
+                    gaya: 0,
+                    bacha: bachaValZ,
+                    karkhanaId: kid,
+                    isOpening: true,
+                    note: "📦 Opening Stock (" + curSess + " Se Aaya)"
+                });
+            }
         }
     });
 
@@ -372,7 +314,6 @@ function commitStage5_Finalize(curSess, newSess) {
     var sessions = getAppSessions();
     if (sessions.indexOf(newSess) === -1) sessions.push(newSess);
 
-    // Save session pointers to LocalStorage & Memory
     localStorage.setItem(uId + "_app_sessions_list", JSON.stringify(sessions));
     localStorage.setItem(uId + "_app_active_session", newSess);
     if (typeof APP_MEMORY_CACHE !== "undefined") {
@@ -384,7 +325,6 @@ function commitStage5_Finalize(curSess, newSess) {
         idbPut(uId + "_app_active_session", newSess);
     }
 
-    // 🚨 FIREBASE ACTIVE SESSION LOCK (Prevents Jumping Back)
     if (typeof db !== "undefined" && db && uId) {
         try {
             db.ref("users/" + uId + "/app_active_session").set(newSess);
@@ -438,7 +378,7 @@ function commitStage5_Finalize(curSess, newSess) {
         var modalBody = modal.querySelector(".modal-body");
         if (modalBody) {
             modalBody.innerHTML = 
-                "<div style='text-align:center; padding:15px; animation:fadeIn 0.4s ease;'>" +
+                "<div style='text-align:center; padding:15px;'>" +
                     "<div style='font-size:55px; margin-bottom:8px;'>🎉 ✨ 🚀</div>" +
                     "<h2 style='color:#1e3a8a; font-size:22px; font-weight:800; margin-bottom:6px;'>NAYA SAAL MUBARAK HO!</h2>" +
                     "<p style='color:#059669; font-size:14px; font-weight:700;'>Session '" + newSess + "' Successfully Start Ho Gaya Hai!</p>" +
@@ -450,7 +390,7 @@ function commitStage5_Finalize(curSess, newSess) {
                         "<div>⚙️ <strong>Sancha Stock:</strong> Carry Forward</div>" +
                         "<div>✂️ <strong>Job Work Khata:</strong> Carry Forward</div>" +
                     "</div>" +
-                    "<p style='font-size:12px; color:#64748b; margin-bottom:15px;'>* Pichla saal safely freeze ho chuka hai. Aap jab chahein session dropdown se purana hisab dekh sakte hain.</p>" +
+                    "<p style='font-size:12px; color:#64748b; margin-bottom:15px;'>* Pichla saal safely freeze ho chuka hai. Naye saal me Opening Stock live add ho chuka hai.</p>" +
                     "<button class='btn' style='background:linear-gradient(135deg, #10b981, #059669); font-size:15px; font-weight:bold; padding:12px; cursor:pointer;' onclick='completeNewSessionStartup(\"" + newSess + "\")'>🚀 Naye Saal Me Kaam Shuru Karein</button>" +
                 "</div>";
         }
@@ -465,11 +405,8 @@ function completeNewSessionStartup(targetSess) {
     var s = targetSess || pendingTransferNewSession || getActiveFinancialSession();
 
     localStorage.setItem(uId + "_app_active_session", s);
-    if (typeof APP_MEMORY_CACHE !== "undefined") {
-        APP_MEMORY_CACHE[uId + "_app_active_session"] = s;
-    }
+    if (typeof APP_MEMORY_CACHE !== "undefined") APP_MEMORY_CACHE[uId + "_app_active_session"] = s;
     if (typeof idbPut === "function") idbPut(uId + "_app_active_session", s);
-
     if (typeof db !== "undefined" && db && uId) {
         try { db.ref("users/" + uId + "/app_active_session").set(s); } catch(e) {}
     }
