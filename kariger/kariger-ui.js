@@ -192,7 +192,7 @@ function deleteKariger(id) {
     renderKarigerTable();
 }
 
-// 3. DROPDOWNS & LIVE STOCK DISPLAY (SEPARATE TANI & CHUKKA DATALISTS)
+// 3. DROPDOWNS & LIVE STOCK DISPLAY
 function populateSheetDatalists() {
     var banaDl = document.getElementById("sheet-bana-dl");
     if (banaDl) {
@@ -256,11 +256,11 @@ function updateLiveStockDisplay() {
 
     setText("live-bana-stock-badge", "Bacha: " + (bItem ? Number(bItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
     setText("live-zari-stock-badge", "Bacha: " + (zItem ? Number(zItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
-    setText("live-tani-stock-badge", "Bacha: " + (tItem ? Number(tItem.aaya || tItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
-    setText("live-chukka-stock-badge", "Bacha: " + (cItem ? Number(cItem.aaya || cItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
+    setText("live-tani-stock-badge", "Bacha: " + (tItem ? Number(tItem.bacha !== undefined ? tItem.bacha : tItem.aaya || 0).toFixed(2) : "0.00") + " Kg");
+    setText("live-chukka-stock-badge", "Bacha: " + (cItem ? Number(cItem.bacha !== undefined ? cItem.bacha : cItem.aaya || 0).toFixed(2) : "0.00") + " Kg");
 }
 
-// 4. TANI KHATA SHEET CONTROLLER (SHEET LEVEL PERSISTENCE)
+// 4. TANI KHATA SHEET CONTROLLER (TANI & CHUKKA STOCK AUTO-MINUS ENGINE)
 function openKarigerSheet(id) {
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(id); });
     if (!k) return alert("Kariger nahi mila!");
@@ -345,6 +345,18 @@ function deleteTaniSheet(idx, e) {
     var sheets = getKarigerSheets(activeKarigerId);
     if (sheets.length <= 1) return alert("Pehli Tani Sheet delete nahi ho sakti!");
     if (!confirm("Kya is Tani Sheet ko delete karna chahte hain?")) return;
+    
+    // Revert Sancha Stock if tani was issued on this sheet
+    var delSh = sheets[idx];
+    if (delSh) {
+        if (delSh.taniItem && Number(delSh.taniWazan) > 0) {
+            revertSanchaStock(delSh.taniItem, "tani", Number(delSh.taniWazan));
+        }
+        if (delSh.chukkaItem && Number(delSh.chukkaWazan) > 0) {
+            revertSanchaStock(delSh.chukkaItem, "chukka", Number(delSh.chukkaWazan));
+        }
+    }
+
     sheets.splice(idx, 1);
     saveKarigerSheets(activeKarigerId, sheets);
     activeSheetIndex = 0;
@@ -379,6 +391,21 @@ function loadCurrentSheetData() {
     updateLiveStockDisplay();
 }
 
+// SANCHA STOCK REVERT HELPER
+function revertSanchaStock(itemName, category, wazan) {
+    if (!itemName || !wazan) return;
+    var sList = safeArray(getStore("sancha_items"));
+    var found = sList.find(function(x) {
+        return x && x.name && x.name.toLowerCase() === itemName.toLowerCase() && (x.category || "tani").toLowerCase() === category.toLowerCase();
+    });
+    if (found) {
+        found.gaya = Math.max(0, Number(((Number(found.gaya) || 0) - Number(wazan)).toFixed(2)));
+        found.bacha = Number(((Number(found.aaya) || 0) - found.gaya).toFixed(2));
+        setStore("sancha_items", sList);
+    }
+}
+
+// 5. CONFIG SAVE WITH AUTO SANCHA STOCK DEDUCTION
 function saveCurrentSheetConfig() {
     if (!activeKarigerId) return;
     var sheets = getKarigerSheets(activeKarigerId);
@@ -400,10 +427,13 @@ function saveCurrentSheetConfig() {
     sh.banaItem = (document.getElementById("line-bana-name")?.value || "").trim();
     sh.zariItem = (document.getElementById("line-zari-name")?.value || "").trim();
 
-    var oldTaniWazan = sh.taniWazan || 0;
+    var oldTaniWazan = Number(sh.taniWazan || 0);
     var newTaniWazan = parseFloat(document.getElementById("sheet-tani-wazan")?.value) || 0;
-    var oldChukkaWazan = sh.chukkaWazan || 0;
+    var oldChukkaWazan = Number(sh.chukkaWazan || 0);
     var newChukkaWazan = parseFloat(document.getElementById("sheet-chukka-wazan")?.value) || 0;
+
+    var oldTaniItem = sh.taniItem || "";
+    var oldChukkaItem = sh.chukkaItem || "";
 
     sh.taniItem = (document.getElementById("sheet-tani-item")?.value || "").trim();
     sh.taniSancha = (document.getElementById("sheet-tani-sancha")?.value || "").trim();
@@ -412,43 +442,85 @@ function saveCurrentSheetConfig() {
     sh.chukkaSancha = (document.getElementById("sheet-chukka-sancha")?.value || "").trim();
     sh.chukkaWazan = newChukkaWazan;
 
-    // Sancha Passbook me Tani Issue Record
-    if (sh.taniItem && newTaniWazan > 0 && newTaniWazan !== oldTaniWazan) {
+    // ================= 1. TANI STOCK AUTO-MINUS =================
+    if (sh.taniItem && (newTaniWazan !== oldTaniWazan || sh.taniItem !== oldTaniItem)) {
+        var sList = safeArray(getStore("sancha_items"));
+        // Old item revert if changed
+        if (oldTaniItem && oldTaniItem !== sh.taniItem && oldTaniWazan > 0) {
+            revertSanchaStock(oldTaniItem, "tani", oldTaniWazan);
+            oldTaniWazan = 0;
+        }
+
+        var tFound = sList.find(function(x) {
+            return x && x.name && x.name.toLowerCase() === sh.taniItem.toLowerCase() && (x.category || "tani").toLowerCase() === "tani";
+        });
+
+        if (tFound) {
+            var diffT = newTaniWazan - oldTaniWazan;
+            tFound.gaya = Math.max(0, Number(((Number(tFound.gaya) || 0) + diffT).toFixed(2)));
+            tFound.bacha = Number(((Number(tFound.aaya) || 0) - tFound.gaya).toFixed(2));
+            setStore("sancha_items", sList);
+        }
+
+        // Passbook Entry
         var sHist = safeArray(getStore("sancha_history"));
         var refKey = activeKarigerId + "_" + sh.id + "_tani";
         sHist = sHist.filter(function(h) { return !h || h.refId !== refKey; });
-        sHist.push({
-            id: "shist_" + Date.now(),
-            refId: refKey,
-            date: getTodayDate(),
-            category: "tani",
-            name: sh.taniItem,
-            kariger: kName,
-            type: "Kariger Issue (Tani)",
-            aaya: 0,
-            gaya: newTaniWazan,
-            karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
-        });
+        if (newTaniWazan > 0) {
+            sHist.push({
+                id: "shist_" + Date.now() + "_t",
+                refId: refKey,
+                date: getTodayDate(),
+                category: "tani",
+                name: sh.taniItem,
+                kariger: kName,
+                type: "Kariger Issue (Tani)",
+                aaya: 0,
+                gaya: newTaniWazan,
+                karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
+            });
+        }
         setStore("sancha_history", sHist);
     }
 
-    // Sancha Passbook me Chukka Issue Record
-    if (sh.chukkaItem && newChukkaWazan > 0 && newChukkaWazan !== oldChukkaWazan) {
+    // ================= 2. CHUKKA STOCK AUTO-MINUS =================
+    if (sh.chukkaItem && (newChukkaWazan !== oldChukkaWazan || sh.chukkaItem !== oldChukkaItem)) {
+        var sList2 = safeArray(getStore("sancha_items"));
+        // Old item revert if changed
+        if (oldChukkaItem && oldChukkaItem !== sh.chukkaItem && oldChukkaWazan > 0) {
+            revertSanchaStock(oldChukkaItem, "chukka", oldChukkaWazan);
+            oldChukkaWazan = 0;
+        }
+
+        var cFound = sList2.find(function(x) {
+            return x && x.name && x.name.toLowerCase() === sh.chukkaItem.toLowerCase() && (x.category || "").toLowerCase() === "chukka";
+        });
+
+        if (cFound) {
+            var diffC = newChukkaWazan - oldChukkaWazan;
+            cFound.gaya = Math.max(0, Number(((Number(cFound.gaya) || 0) + diffC).toFixed(2)));
+            cFound.bacha = Number(((Number(cFound.aaya) || 0) - cFound.gaya).toFixed(2));
+            setStore("sancha_items", sList2);
+        }
+
+        // Passbook Entry
         var sHist2 = safeArray(getStore("sancha_history"));
         var refKey2 = activeKarigerId + "_" + sh.id + "_chukka";
         sHist2 = sHist2.filter(function(h) { return !h || h.refId !== refKey2; });
-        sHist2.push({
-            id: "shist_" + Date.now(),
-            refId: refKey2,
-            date: getTodayDate(),
-            category: "chukka",
-            name: sh.chukkaItem,
-            kariger: kName,
-            type: "Kariger Issue (Chukka)",
-            aaya: 0,
-            gaya: newChukkaWazan,
-            karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
-        });
+        if (newChukkaWazan > 0) {
+            sHist2.push({
+                id: "shist_" + Date.now() + "_c",
+                refId: refKey2,
+                date: getTodayDate(),
+                category: "chukka",
+                name: sh.chukkaItem,
+                kariger: kName,
+                type: "Kariger Issue (Chukka)",
+                aaya: 0,
+                gaya: newChukkaWazan,
+                karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
+            });
+        }
         setStore("sancha_history", sHist2);
     }
 
@@ -457,7 +529,7 @@ function saveCurrentSheetConfig() {
     updateLiveStockDisplay();
 }
 
-// 5. SAVE / UPDATE LINE ROW (AUTO-LINK BANA, ZARI & SAREE/LOTT STOCK)
+// 6. SAVE / UPDATE LINE ROW (BANA, ZARI & SAREE/LOTT STOCK)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
@@ -522,14 +594,13 @@ function saveTaniRow() {
 
     saveKarigerSheets(activeKarigerId, sheets);
 
-    // ================= AUTO-SYNC SAREE & LOTT STOCK =================
+    // Saree & Lott Stock Sync
     if (typeof removeSareeByRefId === "function") {
         removeSareeByRefId(rowId);
     }
     if (typeof recordSareeFromKariger === "function") {
         recordSareeFromKariger(d, sDesign, kName, kGodown, saree, lott, rowId);
     } else {
-        // Safe Fallback in case calculation engine loads late
         var sHist = safeArray(getStore("saree_history")).filter(function(h) { return !h || String(h.refId) !== String(rowId); });
         if (saree > 0) {
             sHist.push({
@@ -633,7 +704,7 @@ function saveTaniRow() {
     alert("✅ Line jud gayi! Saree & Karkhana Stock adjust ho gaya!");
 }
 
-// 6. EDIT ROW
+// 7. EDIT ROW
 function editTaniRow(idx) {
     var sheets = getKarigerSheets(activeKarigerId);
     var sh = sheets[activeSheetIndex];
@@ -657,7 +728,7 @@ function editTaniRow(idx) {
     window.scrollTo({ top: 350, behavior: 'smooth' });
 }
 
-// 7. DELETE ROW (AUTO REMOVES FROM BANA, ZARI & SAREE STOCK)
+// 8. DELETE ROW
 function deleteTaniRow(idx) {
     if (!confirm("Kya aap is row ko delete karna chahte hain?")) return;
     var sheets = getKarigerSheets(activeKarigerId);
@@ -667,7 +738,6 @@ function deleteTaniRow(idx) {
     var r = sh.rows[idx];
     if (!r) return;
 
-    // Saree & Lott Stock entry remove
     if (typeof removeSareeByRefId === "function") {
         removeSareeByRefId(r.id);
     } else {
@@ -675,7 +745,6 @@ function deleteTaniRow(idx) {
         setStore("saree_history", sHist);
     }
 
-    // Bana Stock Revert
     if (r.banaItem && (r.netBana > 0 || r.retBana > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
         var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.banaItem.toLowerCase(); });
@@ -689,7 +758,6 @@ function deleteTaniRow(idx) {
         setStore("bana_history", bHist);
     }
 
-    // Zari Stock Revert
     if (r.zariItem && (r.netZari > 0 || r.retZari > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.zariItem.toLowerCase(); });
@@ -710,7 +778,7 @@ function deleteTaniRow(idx) {
     alert("🗑️ Line delete ho gayi!");
 }
 
-// 8. RENDER TABLE ROWS (9 COLUMNS)
+// 9. RENDER TABLE ROWS (9 COLUMNS)
 function renderSheetRows(sh) {
     var tbody = document.getElementById("sheet-table-body");
     if (!tbody) return;
