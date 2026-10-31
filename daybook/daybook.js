@@ -1,7 +1,7 @@
 /* ========================================================
    SIMPLICITY ERP - ROZANA DAY-BOOK & DASHBOARD ENGINE
    File: daybook/daybook.js • Developed by Farhan Jawed
-   (Bana, Zari, Saree, Cash & Sancha Register + Double Badges)
+   (Bana, Zari, Saree, Cash & Sancha Register + Double Badges + App Startup)
 ======================================================== */
 
 var currentDayBookTab = "bana";
@@ -15,6 +15,10 @@ function setElementText(id, v) {
 function setElementHTML(id, html) {
     var el = document.getElementById(id);
     if (el) el.innerHTML = (html !== undefined && html !== null) ? html : "";
+}
+
+function setT(id, v) {
+    setElementText(id, v);
 }
 
 function setDashboardToday() {
@@ -67,14 +71,61 @@ function renderDashboardDayBook() {
         });
     });
 
-    // Saree Daybook Calculation
-    var sH = safeArray(getStore("saree_history")).filter(function(h) {
-        return h && h.date === d;
+    // 🔒 SAREE FILTER:
+    // 1. Inward (Aayi): Sirf factory kariger bunai saree aayegi (job work se tayyar aayi hui nahi).
+    // 2. Outward (Gayi): Factory se Calender ya Cutting par bheji gayi saree out mein dikhegi.
+    var rawSareeHistory = safeArray(getStore("saree_history"));
+    var sH = [];
+
+    rawSareeHistory.forEach(function(h) {
+        if (!h || h.date !== d) return;
+
+        var ref = String(h.refId || "");
+        var isJobWork = (ref.indexOf("jwb_") === 0);
+        var isDukan = (ref.indexOf("duk_") === 0);
+        var inQ = Number(h.aai !== undefined ? h.aai : (h.pcs || 0));
+        var outQ = Number(h.gai || 0);
+
+        // Agar Job Work se WAPAS AAYI hui saree hai ya Dukan transfer hai toh Daybook me nahi aayegi
+        if (isDukan) return;
+        if (isJobWork && inQ > 0) return; // Wapas aayi hui entry Daybook me block
+
+        // Agar Job Work ke liye GAYI (OUT) hui hai:
+        if (isJobWork && outQ > 0) {
+            var workerLabel = h.note || h.typeLabel || "Job Work";
+            // Check Calender ya Cutting
+            var isCal = (String(h.typeLabel || "").toLowerCase().indexOf("calender") !== -1);
+            var cleanLabel = isCal ? "Calender me hai (" + workerLabel.replace(" ko bheja", "") + ")" 
+                                   : "Cutting me hai (" + workerLabel.replace(" ko bheja", "") + ")";
+
+            sH.push({
+                sareeName: h.sareeName || "Saree",
+                karigerName: h.karigerName || h.kariger || "-",
+                aai: 0,
+                gai: outQ,
+                detail: cleanLabel
+            });
+            return;
+        }
+
+        // Factory Normal Fresh Bunai Saree (IN)
+        if (!isJobWork && (h.type === "fresh" || !h.type)) {
+            if (inQ > 0 || outQ > 0) {
+                sH.push({
+                    sareeName: h.sareeName || h.name || "Saree",
+                    karigerName: h.karigerName || h.kariger || "-",
+                    aai: inQ,
+                    gai: outQ,
+                    detail: h.typeLabel || h.note || "Fresh Saree Bunai"
+                });
+            }
+        }
     });
+
     var sIn = 0, sOut = 0;
     sH.forEach(function(h) {
-        sIn += (Number(h.aai || h.pcs || 0));
-        sOut += (Number(h.gai || 0));
+        sIn += Number(h.aai || 0);
+        sOut += Number(h.gai || 0);
     });
 
     // Sancha (Tani & Chukka) Daybook Calculation
@@ -157,21 +208,27 @@ function renderDashboardDayBook() {
         }
         tfoot.innerHTML = "<tr><td colspan='2'><strong>Total Rozana Zari:</strong></td><td><strong style='color:#059669;'>+" + zIn.toFixed(2) + "</strong></td><td><strong style='color:#dc2626;'>-" + zOut.toFixed(2) + "</strong></td></tr>";
 
-    // TAB 3: SAREE
+    // TAB 3: SAREE (FACTORY BUNAI + JOB WORK OUT)
     } else if (currentDayBookTab === "saree") {
-        thead.innerHTML = "<tr style='background:#2563eb; color:white;'><th>Saree Ka Naam</th><th>Kariger / Godam</th><th>📥 Aayi (In)</th><th>📤 Gayi (Out)</th><th>Vivran</th></tr>";
+        thead.innerHTML = "<tr style='background:#2563eb; color:white;'><th>Saree Ka Naam</th><th>Kariger / Vivran</th><th>📥 Aayi (In)</th><th>📤 Gayi (Out)</th><th>Detail</th></tr>";
         if (!sH.length) {
-            tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#888;'>Is tarikh me Factory Saree ki entry nahi hai.</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#888;'>Is tarikh me Saree ki koi entry nahi hai.</td></tr>";
         } else {
             var sBuf = "";
             sH.forEach(function(h) {
-                var inQ = Number(h.aai || h.pcs || 0);
+                var inQ = Number(h.aai || 0);
                 var outQ = Number(h.gai || 0);
-                sBuf += "<tr><td><strong>" + (h.sareeName || h.name || "Saree") + "</strong></td><td>" + (h.karigerName || h.kariger || "-") + "</td><td style='color:#059669; font-weight:700;'>" + (inQ > 0 ? ("+" + inQ + " Pcs") : "-") + "</td><td style='color:#dc2626; font-weight:700;'>" + (outQ > 0 ? ("-" + outQ + " Pcs") : "-") + "</td><td>" + (h.typeLabel || h.note || "Fresh Saree") + "</td></tr>";
+                sBuf += "<tr>" +
+                    "<td><strong>" + h.sareeName + "</strong></td>" +
+                    "<td>👤 " + h.karigerName + "</td>" +
+                    "<td style='color:#059669; font-weight:700;'>" + (inQ > 0 ? ("+" + inQ + " Pcs") : "-") + "</td>" +
+                    "<td style='color:#dc2626; font-weight:700;'>" + (outQ > 0 ? ("-" + outQ + " Pcs") : "-") + "</td>" +
+                    "<td>" + (outQ > 0 ? ("<span style='color:#dc2626; font-weight:bold;'>" + h.detail + "</span>") : h.detail) + "</td>" +
+                "</tr>";
             });
             tbody.innerHTML = sBuf;
         }
-        tfoot.innerHTML = "<tr><td colspan='2'><strong>Kul Fresh Saree:</strong></td><td><strong style='color:#059669;'>+" + sIn + " Pcs</strong></td><td><strong style='color:#dc2626;'>-" + sOut + " Pcs</strong></td><td>-</td></tr>";
+        tfoot.innerHTML = "<tr><td colspan='2'><strong>Kul Saree:</strong></td><td><strong style='color:#059669;'>+" + sIn + " Pcs</strong></td><td><strong style='color:#dc2626;'>-" + sOut + " Pcs</strong></td><td>-</td></tr>";
 
     // TAB 4: PAYMENT
     } else if (currentDayBookTab === "payment") {
@@ -222,7 +279,7 @@ function renderDashboardDayBook() {
     }
 }
 
-// 2. DASHBOARD TOTAL BADGES ENGINE (PAYMENT & SANCHA DOUBLE BADGES)
+// 2. DASHBOARD TOTAL BADGES ENGINE
 function updateDashboardBadgeTotals() {
     var karList = typeof sanitizeKarigerList === "function" ? sanitizeKarigerList() : safeArray(getStore("kariger_list"));
     setElementText("btn-total-kariger", "Total: " + karList.length);
@@ -231,11 +288,13 @@ function updateDashboardBadgeTotals() {
     var ts = 0;
     var sH = safeArray(getStore("saree_history")).filter(function(x) { return (x.type || "fresh") === "fresh"; });
     if (sH.length) {
-        sH.forEach(function(s) { ts += (Number(s.aai || 0) - Number(s.gai || 0)); });
-    } else {
-        safeArray(getStore("saree_stock")).forEach(function(s) { if (s) ts += (Number(s.pcs) || 0); });
+        sH.forEach(function(s) { 
+            var inQ = Number(s.aai !== undefined ? s.aai : (s.pcs || 0));
+            var outQ = Number(s.gai || 0);
+            ts += (inQ - outQ); 
+        });
     }
-    setElementText("btn-total-saree", "Stock: " + ts + " Pcs");
+    setElementText("btn-total-saree", "Stock: " + Math.max(0, ts) + " Pcs");
 
     if (badgeCalculationTimer) clearTimeout(badgeCalculationTimer);
 
@@ -266,21 +325,26 @@ function updateDashboardBadgeTotals() {
         });
         setElementText("btn-total-zari", "Bacha: " + tz.toFixed(2) + " Kg");
 
-        // 3. Payment Badge (Diya & Baki aamne-saamne)
-        var totalBaki = 0;
-        var totalDiya = 0;
+        // 3. Payment Badge
+        var totalBakiAll = 0;
+        var totalDiyaAll = 0;
         karList.forEach(function(k) {
-            var sheets = typeof getKarigerSheets === "function" ? getKarigerSheets(k.id) : [];
-            var curSheet = (sheets && sheets.length) ? sheets[sheets.length - 1] : null;
-            if (curSheet && typeof calculateSheetTotals === "function") {
-                var c = calculateSheetTotals(curSheet);
-                totalDiya += Number(c.totPaid || 0);
-                totalBaki += Number(c.remainingAmt || 0);
+            if (k && k.id) {
+                var sheets = typeof getKarigerSheets === "function" ? getKarigerSheets(k.id) : [];
+                var curSheet = (sheets && sheets.length) ? sheets[sheets.length - 1] : null;
+                if (curSheet && typeof calculateSheetTotals === "function") {
+                    var c = calculateSheetTotals(curSheet);
+                    totalDiyaAll += Number(c.totPaid || 0);
+                    totalBakiAll += Number(c.remainingAmt || 0);
+                } else if (typeof getKarigerFinanceSummary === "function") {
+                    var fin = getKarigerFinanceSummary(k.id);
+                    totalBakiAll += Number(fin.currentBakaya || 0);
+                }
             }
         });
-        setElementHTML("btn-total-payment", "<span style='color:#059669; font-weight:bold;'>Diya: ₹ " + totalDiya.toFixed(0) + "</span> • <span style='color:#dc2626; font-weight:bold;'>Baki: ₹ " + totalBaki.toFixed(0) + "</span>");
+        setElementHTML("btn-total-payment", "<span style='color:#059669; font-weight:bold;'>Diya: ₹ " + totalDiyaAll.toFixed(0) + "</span> • <span style='color:#dc2626; font-weight:bold;'>Baki: ₹ " + totalBakiAll.toFixed(0) + "</span>");
 
-        // 4. Sancha Badge (Tani & Chukka aamne-saamne)
+        // 4. Sancha Badge
         var totTani = 0, totChukka = 0;
         safeArray(getStore("sancha_items")).forEach(function(s) {
             if (!s) return;
@@ -347,3 +411,49 @@ function getCurrentActiveSection() {
     }
     return "dashboard-view";
 }
+
+// 4. APP INIT & STARTUP ENGINE
+function initApp() {
+    var dEl = document.getElementById("dash-day-date");
+    if (dEl) dEl.value = getTodayDate();
+    if (typeof populateSessionDropdown === "function") populateSessionDropdown();
+    renderDashboardDayBook();
+    updateDashboardBadgeTotals();
+    if (typeof syncUsersWithFirebase === "function") syncUsersWithFirebase();
+}
+
+// 5. LOGIN & STARTUP LISTENERS
+window.onload = function() {
+    if (typeof clearMemoryCache === "function") clearMemoryCache();
+    currentUserId = null;
+    currentUserRole = null;
+    activeKarigerId = null;
+    activeSheetId = null;
+
+    if (typeof setDisplay === "function") {
+        setDisplay("login-wrapper", "flex");
+        setDisplay("desktop-screen", "none");
+    }
+    if (typeof showLogin === "function") showLogin();
+
+    var idInp = document.getElementById("login-id");
+    var passInp = document.getElementById("login-pass");
+    if (idInp) idInp.value = "";
+    if (passInp) passInp.value = "";
+
+    var errMsg = document.getElementById("login-error");
+    if (errMsg) errMsg.style.display = "none";
+
+    if (idInp) {
+        idInp.addEventListener("keypress", function(e) {
+            if (e.key === "Enter" && typeof handleLogin === "function") handleLogin();
+        });
+    }
+    if (passInp) {
+        passInp.addEventListener("keypress", function(e) {
+            if (e.key === "Enter" && typeof handleLogin === "function") handleLogin();
+        });
+    }
+
+    if (typeof syncUsersWithFirebase === "function") syncUsersWithFirebase();
+};
