@@ -106,7 +106,6 @@ function saveNewZari() {
     }
     setStore("zari_stock", list);
 
-    // Save in Zari History
     var hist = safeArray(getStore("zari_history"));
     hist.push({
         id: "zhist_" + Date.now(),
@@ -120,7 +119,6 @@ function saveNewZari() {
     });
     setStore("zari_history", hist);
 
-    // Reset Form
     if (document.getElementById("zari-new-name")) document.getElementById("zari-new-name").value = "";
     if (document.getElementById("zari-aaya")) document.getElementById("zari-aaya").value = "";
     toggleZariForm();
@@ -244,7 +242,7 @@ function renderZariPassbookRows() {
 
     if (sTxt) {
         hist = hist.filter(function(x) {
-            var fullRow = (String(x.date || "") + " " + String(x.type || "") + " " + String(x.kariger || "") + " " + String(x.aaya || "") + " " + String(x.gaya || "")).toLowerCase();
+            var fullRow = (String(x.date || "") + " " + String(x.type || "") + " " + String(x.kariger || "") + " " + String(x.aaya || x.qty || x.wazan || "") + " " + String(x.gaya || "")).toLowerCase();
             return fullRow.indexOf(sTxt) !== -1;
         });
     }
@@ -255,17 +253,22 @@ function renderZariPassbookRows() {
     }
 
     hist.forEach(function(r) {
-        var isKhareed = (r.type && r.type.indexOf("Khareed") !== -1);
-        var actBtn = isKhareed 
-            ? ("<button class='delete-btn' onclick='deleteZariPurchase(\"" + r.id + "\", " + (Number(r.aaya) || 0) + ")'>🗑️ Delete</button>") 
-            : "<span style='color:#64748b; font-size:11px; font-weight:700;'>🔒 Kariger Khata</span>";
+        var aayaQty = Number(r.aaya || r.qty || r.wazan || r.weight || 0);
+        var gayaQty = Number(r.gaya || 0);
+
+        var isKarigerEntry = r.refId || (r.type && r.type.toLowerCase().indexOf("kariger") !== -1);
+        var karigerDisplay = (r.kariger && r.kariger !== "-" && r.kariger !== "undefined") ? ("👤 " + r.kariger) : "📦 Factory Inward";
+
+        var actBtn = isKarigerEntry 
+            ? "<span style='color:#64748b; font-size:11px; font-weight:700;'>🔒 Kariger Khata</span>"
+            : ("<button class='delete-btn' onclick='deleteZariPurchase(\"" + r.id + "\", " + aayaQty + ")'>🗑️ Delete</button>");
 
         tbody.innerHTML += "<tr>" +
             "<td>" + (r.date || "-") + "</td>" +
-            "<td><strong>" + (r.type || "-") + "</strong></td>" +
-            "<td style='color:#1e3a8a; font-weight:700;'>" + (r.kariger !== "-" ? ("👤 " + r.kariger) : "📦 Factory Inward") + "</td>" +
-            "<td style='color:#059669; font-weight:700;'>" + (Number(r.aaya) > 0 ? Number(r.aaya).toFixed(2) : "-") + "</td>" +
-            "<td style='color:#ea580c; font-weight:700;'>" + (Number(r.gaya) > 0 ? Number(r.gaya).toFixed(2) : "-") + "</td>" +
+            "<td><strong>" + (r.type || "Godam Inward") + "</strong></td>" +
+            "<td style='color:#1e3a8a; font-weight:700;'>" + karigerDisplay + "</td>" +
+            "<td style='color:#059669; font-weight:700;'>" + (aayaQty > 0 ? aayaQty.toFixed(2) : "-") + "</td>" +
+            "<td style='color:#ea580c; font-weight:700;'>" + (gayaQty > 0 ? gayaQty.toFixed(2) : "-") + "</td>" +
             "<td style='text-align:center;'>" + actBtn + "</td>" +
         "</tr>";
     });
