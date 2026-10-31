@@ -1,7 +1,7 @@
 /* ========================================================
    SIMPLICITY ERP - 5-STAGE SEQUENTIAL YEAR-END CLOSING
    File: session/session-closing.js • Developed by Farhan Jawed
-   (Accurate Opening Stock + Celebration Wish View + Non-Freezing Chunks)
+   (Accurate Opening Stock + Firebase Lock + Non-Freezing Chunks)
 ======================================================== */
 
 var pendingTransferNewSession = null;
@@ -41,7 +41,6 @@ function startSequentialYearClosing() {
     var modal = document.getElementById("session-transfer-modal");
     if (!modal) return;
 
-    // Reset Transfer Modal View
     var modalBody = modal.querySelector(".modal-body");
     if (modalBody) {
         modalBody.innerHTML = 
@@ -52,7 +51,7 @@ function startSequentialYearClosing() {
             "<div style='margin-top:10px;'><span id='stage-badge-2' class='badge-blue'>Waiting</span> <small id='stage-status-2'>2. Saree Opening Stock</small><div style='background:#e2e8f0; height:4px; margin-top:4px;'><div id='stage-bar-2' style='background:#2563eb; width:0%; height:100%;'></div></div></div>" +
             "<div style='margin-top:10px;'><span id='stage-badge-3' class='badge-blue'>Waiting</span> <small id='stage-status-3'>3. Bana & Zari Opening Stock</small><div style='background:#e2e8f0; height:4px; margin-top:4px;'><div id='stage-bar-3' style='background:#2563eb; width:0%; height:100%;'></div></div></div>" +
             "<div style='margin-top:10px;'><span id='stage-badge-4' class='badge-blue'>Waiting</span> <small id='stage-status-4'>4. Sancha & Job Work Carry-Forward</small><div style='background:#e2e8f0; height:4px; margin-top:4px;'><div id='stage-bar-4' style='background:#2563eb; width:0%; height:100%;'></div></div></div>" +
-            "<div style='margin-top:10px;'><span id='stage-badge-5' class='badge-blue'>Waiting</span> <small id='stage-status-5'>5. Safe Commit & Database Lock</small><div style='background:#e2e8f0; height:4px; margin-top:4px;'><div id='stage-bar-5' style='background:#2563eb; width:0%; height:100%;'></div></div></div>";
+            "<div style='margin-top:10px;'><span id='stage-badge-5' class='badge-blue'>Waiting</span> <small id='stage-status-5'>5. Safe Commit & Cloud Lock</small><div style='background:#e2e8f0; height:4px; margin-top:4px;'><div id='stage-bar-5' style='background:#2563eb; width:0%; height:100%;'></div></div></div>";
     }
 
     modal.style.display = "flex";
@@ -129,11 +128,9 @@ function processNextKarigerChunk(curSess, newSess) {
     }
 }
 
-// STAGE 2: SAREE STOCK (Opening Stock in saree_history)
+// STAGE 2: SAREE STOCK
 function runStage2_SareeStock(curSess, newSess) {
     var rawHistory = safeArray(getStore("saree_history"));
-
-    // Calculate Final Remaining Stock for each tab from saree_history
     var freshMap = {}, finMap = {}, lottMap = {};
 
     rawHistory.forEach(function(h) {
@@ -158,7 +155,6 @@ function runStage2_SareeStock(curSess, newSess) {
     stage2_totFinPcs = 0;
     stage2_totLottPcs = 0;
 
-    // 1. Fresh Saree Opening
     for (var kf in freshMap) {
         var bachi = Math.max(0, freshMap[kf]);
         if (bachi > 0) {
@@ -182,7 +178,6 @@ function runStage2_SareeStock(curSess, newSess) {
         }
     }
 
-    // 2. Finished Saree Opening
     for (var kfin in finMap) {
         var bachiFin = Math.max(0, finMap[kfin]);
         if (bachiFin > 0) {
@@ -206,7 +201,6 @@ function runStage2_SareeStock(curSess, newSess) {
         }
     }
 
-    // 3. Lott Saree Opening
     for (var kl in lottMap) {
         var bachiLott = Math.max(0, lottMap[kl]);
         if (bachiLott > 0) {
@@ -247,7 +241,6 @@ function runStage3_BanaZariStock(curSess, newSess) {
     var karkhanas = safeArray(getStore("karkhana_list"));
     if (!karkhanas.length) karkhanas = [{ id: "k_main", name: "Main Godown", isDefault: true }];
 
-    // 1. Bana Opening Stock
     stage3_newBanaStock = [];
     var banaItems = safeArray(getStore("bana_stock"));
     var seenBana = [];
@@ -282,7 +275,6 @@ function runStage3_BanaZariStock(curSess, newSess) {
         }
     });
 
-    // 2. Zari Opening Stock
     stage3_newZariStock = [];
     var zariItems = safeArray(getStore("zari_stock"));
     var seenZari = [];
@@ -374,13 +366,31 @@ function runStage4_SanchaAndJobwork(curSess, newSess) {
     setTimeout(function() { commitStage5_Finalize(curSess, newSess); }, 150);
 }
 
-// STAGE 5: SAVE TO NEW SESSION & CELEBRATION WISH SCREEN
+// STAGE 5: SAVE TO NEW SESSION & FIREBASE LOCK
 function commitStage5_Finalize(curSess, newSess) {
     var uId = (typeof currentUserId !== "undefined" && currentUserId) ? currentUserId : "app";
     var sessions = getAppSessions();
     if (sessions.indexOf(newSess) === -1) sessions.push(newSess);
+
+    // Save session pointers to LocalStorage & Memory
     localStorage.setItem(uId + "_app_sessions_list", JSON.stringify(sessions));
-    if (typeof idbPut === "function") idbPut(uId + "_app_sessions_list", sessions);
+    localStorage.setItem(uId + "_app_active_session", newSess);
+    if (typeof APP_MEMORY_CACHE !== "undefined") {
+        APP_MEMORY_CACHE[uId + "_app_sessions_list"] = sessions;
+        APP_MEMORY_CACHE[uId + "_app_active_session"] = newSess;
+    }
+    if (typeof idbPut === "function") {
+        idbPut(uId + "_app_sessions_list", sessions);
+        idbPut(uId + "_app_active_session", newSess);
+    }
+
+    // 🚨 FIREBASE ACTIVE SESSION LOCK (Prevents Jumping Back)
+    if (typeof db !== "undefined" && db && uId) {
+        try {
+            db.ref("users/" + uId + "/app_active_session").set(newSess);
+            db.ref("users/" + uId + "/app_sessions_list").set(sessions);
+        } catch(e) {}
+    }
 
     var setTargetStore = function(key, data) {
         var fullKey = uId + "_" + newSess + "_" + key;
@@ -414,10 +424,6 @@ function commitStage5_Finalize(curSess, newSess) {
     setTargetStore("jw_payments_list", []);
     setTargetStore("dukan_transfer_history", []);
 
-    // Set Active Session to New Session
-    localStorage.setItem(uId + "_app_active_session", newSess);
-    if (typeof APP_MEMORY_CACHE !== "undefined") APP_MEMORY_CACHE[uId + "_app_active_session"] = newSess;
-
     var bar5 = document.getElementById("stage-bar-5");
     var badge5 = document.getElementById("stage-badge-5");
     var mainBar = document.getElementById("transfer-main-bar");
@@ -425,7 +431,7 @@ function commitStage5_Finalize(curSess, newSess) {
     if (mainBar) mainBar.style.width = "100%";
     if (badge5) { badge5.textContent = "✅ Complete"; badge5.style.background = "#ecfdf5"; badge5.style.color = "#059669"; }
 
-    // 🎉 CELEBRATION WISH SCREEN MODAL VIEW
+    // 🎉 CELEBRATION WISH SCREEN
     setTimeout(function() {
         var modal = document.getElementById("session-transfer-modal");
         if (!modal) return;
@@ -445,16 +451,35 @@ function commitStage5_Finalize(curSess, newSess) {
                         "<div>✂️ <strong>Job Work Khata:</strong> Carry Forward</div>" +
                     "</div>" +
                     "<p style='font-size:12px; color:#64748b; margin-bottom:15px;'>* Pichla saal safely freeze ho chuka hai. Aap jab chahein session dropdown se purana hisab dekh sakte hain.</p>" +
-                    "<button class='btn' style='background:linear-gradient(135deg, #10b981, #059669); font-size:15px; font-weight:bold; padding:12px; cursor:pointer;' onclick='completeNewSessionStartup()'>🚀 Naye Saal Me Kaam Shuru Karein</button>" +
+                    "<button class='btn' style='background:linear-gradient(135deg, #10b981, #059669); font-size:15px; font-weight:bold; padding:12px; cursor:pointer;' onclick='completeNewSessionStartup(\"" + newSess + "\")'>🚀 Naye Saal Me Kaam Shuru Karein</button>" +
                 "</div>";
         }
     }, 400);
 }
 
-function completeNewSessionStartup() {
+function completeNewSessionStartup(targetSess) {
     var modal = document.getElementById("session-transfer-modal");
     if (modal) modal.style.display = "none";
+
+    var uId = (typeof currentUserId !== "undefined" && currentUserId) ? currentUserId : "app";
+    var s = targetSess || pendingTransferNewSession || getActiveFinancialSession();
+
+    localStorage.setItem(uId + "_app_active_session", s);
+    if (typeof APP_MEMORY_CACHE !== "undefined") {
+        APP_MEMORY_CACHE[uId + "_app_active_session"] = s;
+    }
+    if (typeof idbPut === "function") idbPut(uId + "_app_active_session", s);
+
+    if (typeof db !== "undefined" && db && uId) {
+        try { db.ref("users/" + uId + "/app_active_session").set(s); } catch(e) {}
+    }
+
+    populateSessionDropdown();
+    var sel = document.getElementById("app-session-select");
+    if (sel) sel.value = s;
+
     if (typeof clearMemoryCache === "function") clearMemoryCache();
+    if (typeof APP_MEMORY_CACHE !== "undefined") APP_MEMORY_CACHE[uId + "_app_active_session"] = s;
 
     if (typeof initIndexedDBPreload === "function") {
         initIndexedDBPreload(function() {
