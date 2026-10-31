@@ -1,5 +1,5 @@
 /* ========================================================
-   SIMPLICITY ERP - KARIGER UI & KHATA CONTROLLER
+   SIMPLICITY ERP - KARIGER UI & SHEET ENGINE
    File: kariger/kariger-ui.js
 ======================================================== */
 
@@ -24,18 +24,31 @@ function sanitizeKarigerList() {
     return list.filter(function(k) { return k && k.name && String(k.name).trim() !== ""; });
 }
 
+// 1. NAVIGATION (DASHBOARD & KARIGER SWITCHING)
 function openKarigerModule() {
-    var s1 = document.getElementById("kariger-sheet-section");
-    if (s1) s1.style.display = "none";
-    var s2 = document.getElementById("kariger-section");
-    if (s2) s2.style.display = "block";
+    var dView = document.getElementById("dashboard-view");
+    if (dView) dView.style.display = "none";
+    var shView = document.getElementById("kariger-sheet-section");
+    if (shView) shView.style.display = "none";
+    var kSec = document.getElementById("kariger-section");
+    if (kSec) kSec.style.display = "block";
 
     currentKarigerPage = 1;
     renderKarigerKarkhanaTabs();
     renderKarigerTable();
 }
 
-// 1. KARKHANA TABS & TABLE
+function backToDashboard() {
+    var kSec = document.getElementById("kariger-section");
+    if (kSec) kSec.style.display = "none";
+    var shSec = document.getElementById("kariger-sheet-section");
+    if (shSec) shSec.style.display = "none";
+    var dView = document.getElementById("dashboard-view");
+    if (dView) dView.style.display = "block";
+    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
+}
+
+// 2. MASTER TABLE & PAGINATION
 function renderKarigerKarkhanaTabs() {
     var bar = document.getElementById("kariger-karkhana-tabs-bar");
     if (!bar) return;
@@ -182,7 +195,7 @@ function deleteKariger(id) {
     renderKarigerTable();
 }
 
-// 2. TANI KHATA SHEET CONTROLLER
+// 3. TANI KHATA SHEET CONTROLLER
 function openKarigerSheet(id) {
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(id); });
     if (!k) return alert("Kariger nahi mila!");
@@ -190,10 +203,10 @@ function openKarigerSheet(id) {
     activeKarigerId = k.id;
     activeSheetIndex = 0;
 
-    var s1 = document.getElementById("kariger-section");
-    if (s1) s1.style.display = "none";
-    var s2 = document.getElementById("kariger-sheet-section");
-    if (s2) s2.style.display = "block";
+    var kSec = document.getElementById("kariger-section");
+    if (kSec) kSec.style.display = "none";
+    var shSec = document.getElementById("kariger-sheet-section");
+    if (shSec) shSec.style.display = "block";
 
     setText("sheet-kariger-title", k.name + " (" + (k.karkhanaName || "Main Godown") + ") - Saree: " + (k.saree || "-"));
     setVal("row-date", getTodayDate());
@@ -286,26 +299,7 @@ function loadCurrentSheetData() {
     renderSheetRows(sh);
 }
 
-function saveCurrentSheetConfig() {
-    if (!activeKarigerId) return;
-    var sheets = getKarigerSheets(activeKarigerId);
-    var sh = sheets[activeSheetIndex];
-    if (!sh) return;
-
-    sh.rateBana = parseFloat(document.getElementById("rate-bana-input")?.value) || 0;
-    sh.rateZari = parseFloat(document.getElementById("rate-zari-input")?.value) || 0;
-    sh.rateBani = parseFloat(document.getElementById("rate-bani-input")?.value) || 0;
-    sh.pichlaBana = parseFloat(document.getElementById("pichla-bana-input")?.value) || 0;
-    sh.pichlaZari = parseFloat(document.getElementById("pichla-zari-input")?.value) || 0;
-    sh.pichlaBani = parseFloat(document.getElementById("pichla-bani-input")?.value) || 0;
-    sh.banaWaste = parseFloat(document.getElementById("waste-bana-input")?.value) || 0;
-    sh.zariWaste = parseFloat(document.getElementById("waste-zari-input")?.value) || 0;
-
-    saveKarigerSheets(activeKarigerId, sheets);
-    renderSheetRows(sh);
-}
-
-// 3. ADD LINE ROW (LESS TP & LESS TOPI MINUS KARKE NET LINE ME JUDNA)
+// 4. ADD LINE ENTRY (LESS TP & TOPI MINUS HO KAR NET JUDNA)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
@@ -396,7 +390,7 @@ function deleteTaniRow(idx) {
     renderSheetRows(sh);
 }
 
-// 4. RENDER 12 EXACT COLUMNS (DELETE BUTTON AAKHRI ME RAHEGI)
+// 5. RENDER 12 EXACT COLUMNS (DELETE BUTTON AAKHRI ME)
 function renderSheetRows(sh) {
     var tbody = document.getElementById("sheet-table-body");
     if (!tbody) return;
@@ -425,7 +419,6 @@ function renderSheetRows(sh) {
         });
     }
 
-    // Bottom Calculation Cards
     var c = calculateSheetTotals(sh);
     setText("calc-rem-bana", c.remainingBana + " Kg");
     setText("calc-rem-zari", c.remainingZari + " Kg");
