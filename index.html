@@ -214,46 +214,87 @@
                     <button class="back-btn" onclick="openKarigerModule()">← Kariger List</button>
                     <h2 id="sheet-kariger-title" style="color:#1e3a8a;">Tani Khata</h2>
                     <div style="display:flex; gap:8px;">
-                        <button class="add-btn" style="background:#25D366;" onclick="sendKarigerWhatsAppParchi()">📲 Parchi</button>
+                        <button class="add-btn" style="background:#25D366;" onclick="sendKarigerWhatsAppParchi()">📲 WhatsApp</button>
                         <button class="add-btn" onclick="addNewTaniSheet()">+ Nayi Tani</button>
                     </div>
                 </div>
+
                 <div id="sheet-tabs-container" class="sheet-tabs-bar" style="margin-bottom:14px;"></div>
-                <div class="tani-closing-grid">
-                    <div><label>Bana Rate</label><input type="number" step="0.001" id="rate-bana-input"></div>
-                    <div><label>Zari Rate</label><input type="number" step="0.001" id="rate-zari-input"></div>
-                    <div><label>Bani (₹)</label><input type="number" id="rate-bani-input"></div>
-                    <div><label>Pichla Bana</label><input type="number" step="0.01" id="pichla-bana-input"></div>
-                    <div><label>Pichla Zari</label><input type="number" step="0.01" id="pichla-zari-input"></div>
-                    <div><label>Pichla Bani</label><input type="number" id="pichla-bani-input"></div>
-                    <div><label>Bana Waste</label><input type="number" step="0.01" id="waste-bana-input"></div>
-                    <div><label>Zari Waste</label><input type="number" step="0.01" id="waste-zari-input"></div>
+
+                <!-- Rates & Pichla Hisab -->
+                <div class="tani-closing-grid" style="margin-bottom:12px;">
+                    <div><label>Bana Rate</label><input type="number" step="0.001" id="rate-bana-input" onchange="saveCurrentSheetConfig()"></div>
+                    <div><label>Zari Rate</label><input type="number" step="0.001" id="rate-zari-input" onchange="saveCurrentSheetConfig()"></div>
+                    <div><label>Bani (₹)</label><input type="number" id="rate-bani-input" onchange="saveCurrentSheetConfig()"></div>
+                    <div><label>Pichla Bana</label><input type="number" step="0.01" id="pichla-bana-input" onchange="saveCurrentSheetConfig()"></div>
+                    <div><label>Pichla Zari</label><input type="number" step="0.01" id="pichla-zari-input" onchange="saveCurrentSheetConfig()"></div>
+                    <div><label>Pichla Bani</label><input type="number" id="pichla-bani-input" onchange="saveCurrentSheetConfig()"></div>
+                    <div><label>Bana Waste</label><input type="number" step="0.01" id="waste-bana-input" onchange="saveCurrentSheetConfig()"></div>
+                    <div><label>Zari Waste</label><input type="number" step="0.01" id="waste-zari-input" onchange="saveCurrentSheetConfig()"></div>
                 </div>
+
+                <!-- 3 SELECT BOXES (BANA, ZARI & SANCHA ITEM WITH LIVE STOCK) -->
+                <div style="background:#f1f5f9; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:14px;">
+                    <div class="form-row-3">
+                        <div class="input-group">
+                            <label style="color:#059669; font-weight:700;">🧶 Bana Item Select:</label>
+                            <input type="text" id="line-bana-name" list="sheet-bana-dl" placeholder="Bana Item..." oninput="updateLiveStockDisplay()">
+                            <small id="live-bana-stock-badge" style="color:#059669; font-weight:700;">Bacha: 0.00 Kg</small>
+                        </div>
+                        <div class="input-group">
+                            <label style="color:#ea580c; font-weight:700;">✨ Zari Item Select:</label>
+                            <input type="text" id="line-zari-name" list="sheet-zari-dl" placeholder="Zari Item..." oninput="updateLiveStockDisplay()">
+                            <small id="live-zari-stock-badge" style="color:#ea580c; font-weight:700;">Bacha: 0.00 Kg</small>
+                        </div>
+                        <div class="input-group">
+                            <label style="color:#0284c7; font-weight:700;">⚙️ Sancha Item Select:</label>
+                            <input type="text" id="line-entry-sancha" list="sheet-sancha-dl" placeholder="Sancha Item..." oninput="updateLiveStockDisplay()">
+                            <small id="live-sancha-stock-badge" style="color:#0284c7; font-weight:700;">Bacha: 0.00 Kg</small>
+                        </div>
+                    </div>
+                    <datalist id="sheet-bana-dl"></datalist>
+                    <datalist id="sheet-zari-dl"></datalist>
+                    <datalist id="sheet-sancha-dl"></datalist>
+                </div>
+
+                <!-- FORM: TANI, WAZAN, LESS TP & TOPI -->
                 <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:14px;">
                     <div class="form-row-4" style="margin-bottom:8px;">
                         <div class="input-group"><label>Tarikh</label><input type="date" id="row-date"></div>
-                        <div class="input-group"><label>Saree</label><input type="number" id="row-saree"></div>
-                        <div class="input-group"><label>Bana Cone</label><input type="number" step="0.01" id="row-cone"></div>
-                        <div class="input-group"><label>Less TP</label><input type="number" step="0.01" id="row-lesstp"></div>
+                        <div class="input-group"><label>Saree (Pcs)</label><input type="number" id="row-saree"></div>
+                        <div class="input-group"><label>Tani Name</label><input type="text" id="row-taniname" placeholder="Tani-1"></div>
+                        <div class="input-group"><label style="color:#0284c7; font-weight:700;">Tani Wazan (Kg)</label><input type="number" step="0.01" id="row-taniwazan"></div>
+                    </div>
+                    <div class="form-row-4" style="margin-bottom:8px;">
+                        <div class="input-group"><label style="color:#059669;">Bana Cone</label><input type="number" step="0.01" id="row-cone"></div>
+                        <div class="input-group"><label style="color:#dc2626;">Less TP</label><input type="number" step="0.01" id="row-lesstp"></div>
+                        <div class="input-group"><label style="color:#ea580c;">Zari Qty</label><input type="number" step="0.01" id="row-zariqty"></div>
+                        <div class="input-group"><label style="color:#dc2626;">Less Topi</label><input type="number" step="0.01" id="row-topi"></div>
                     </div>
                     <div class="form-row-4">
-                        <div class="input-group"><label>Zari Qty</label><input type="number" step="0.01" id="row-zariqty"></div>
-                        <div class="input-group"><label>Less Topi</label><input type="number" step="0.01" id="row-topi"></div>
-                        <div class="input-group"><label>Paid (₹)</label><input type="number" id="row-paid"></div>
-                        <div class="input-group"><label>Ret Bana</label><input type="number" step="0.01" id="row-retbana"></div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-                        <div class="input-group" style="width:24%;"><label>Ret Zari</label><input type="number" step="0.01" id="row-retzari"></div>
-                        <button class="add-btn" onclick="saveTaniRow()">+ Line Jodein</button>
+                        <div class="input-group"><label>Paid (₹ Diya)</label><input type="number" id="row-paid"></div>
+                        <div class="input-group"><label style="color:#059669;">Ret Bana</label><input type="number" step="0.01" id="row-retbana"></div>
+                        <div class="input-group"><label style="color:#ea580c;">Ret Zari</label><input type="number" step="0.01" id="row-retzari"></div>
+                        <div style="display:flex; align-items:flex-end;">
+                            <button class="add-btn" style="width:100%; padding:10px;" onclick="saveTaniRow()">+ Line Jodein & Stock Minus</button>
+                        </div>
                     </div>
                 </div>
+
+                <!-- TABLE: 11 COLUMNS -->
                 <div class="table-responsive">
                     <table>
-                        <thead><tr style="background:#1e3a8a; color:white;"><th>Tarikh</th><th>Saree</th><th>Cone</th><th>TP</th><th>Net Bana</th><th>Zari</th><th>Topi</th><th>Net Zari</th><th>Diya (₹)</th><th>Ret B</th><th>Ret Z</th><th>Action</th></tr></thead>
+                        <thead>
+                            <tr style="background:#1e3a8a; color:white; font-size:12px;">
+                                <th>Tarikh</th><th>Saree</th><th>Sancha</th><th>Tani</th><th>Wazan</th><th>Net Bana</th><th>Net Zari</th><th>Diya (₹)</th><th>Ret B</th><th>Ret Z</th><th>Action</th>
+                            </tr>
+                        </thead>
                         <tbody id="sheet-table-body"></tbody>
                     </table>
                 </div>
-                <div class="sheet-calculations-grid">
+
+                <!-- CALCULATION SUMMARY -->
+                <div class="sheet-calculations-grid" style="margin-top:14px;">
                     <div class="calc-card"><h4>BANA</h4><div>Bacha: <strong id="calc-rem-bana" style="color:#059669;">0 Kg</strong></div></div>
                     <div class="calc-card"><h4>ZARI</h4><div>Bachi: <strong id="calc-rem-zari" style="color:#ea580c;">0 Kg</strong></div></div>
                     <div class="calc-card"><h4>BAKI RUPYA</h4><div>Baki: <strong id="calc-rem-amt" style="color:#ef4444; font-size:16px;">₹ 0</strong></div></div>
