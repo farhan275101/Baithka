@@ -15,7 +15,7 @@ var GLOBAL_APP_KEYS = [
     "karkhana_list", 
     "app_users", 
     "info_ledger",
-    "sancha_items" /* Sancha items saal badalne par bhi safe rahenge */
+    "sancha_items"
 ];
 
 function clearMemoryCache() {
@@ -85,22 +85,28 @@ function migrateLocalStorageToCache() {
     } catch(e) {}
 }
 
+function getEffectiveUserId() {
+    if (typeof currentUserId !== "undefined" && currentUserId) return String(currentUserId).trim();
+    return "app";
+}
+
 function getStorageKey(key) {
-    if (!currentUserId) return key;
+    var uid = getEffectiveUserId();
     if (GLOBAL_APP_KEYS.indexOf(key) !== -1) {
-        return currentUserId + "_" + key;
+        return uid + "_" + key;
     }
     var sess = "2026-2027";
     if (typeof getActiveFinancialSession === "function") {
         sess = getActiveFinancialSession();
     } else {
-        var storedSess = APP_MEMORY_CACHE[currentUserId + "_app_active_session"] || localStorage.getItem(currentUserId + "_app_active_session");
+        var storedSess = APP_MEMORY_CACHE[uid + "_app_active_session"] || localStorage.getItem(uid + "_app_active_session");
         if (storedSess) sess = String(storedSess).replace(/['"]+/g, '').trim();
     }
     sess = String(sess).replace(/['"]+/g, '').trim() || "2026-2027";
-    return currentUserId + "_" + sess + "_" + key;
+    return uid + "_" + sess + "_" + key;
 }
 
+// 🛡️ UNIVERSAL DATA FINDER: Agar kisi bhi naam ya purane session me data hai toh dhoondh nikalega
 function getStore(key) {
     if (isBackupPreviewMode && PREVIEW_BACKUP_DATA) {
         if (key.indexOf("kariger_sheets_") === 0) {
@@ -118,38 +124,60 @@ function getStore(key) {
         return [];
     }
 
-    if (!currentUserId) return [];
-
     try {
         var fullKey = getStorageKey(key);
-        
-        if (APP_MEMORY_CACHE.hasOwnProperty(fullKey)) {
+        var uid = getEffectiveUserId();
+        var sess = (typeof getActiveFinancialSession === "function") ? getActiveFinancialSession() : "2026-2027";
+
+        // 1. Direct Memory Check
+        if (APP_MEMORY_CACHE.hasOwnProperty(fullKey) && APP_MEMORY_CACHE[fullKey] && APP_MEMORY_CACHE[fullKey] !== "[]" && APP_MEMORY_CACHE[fullKey].length !== 0) {
             var val = APP_MEMORY_CACHE[fullKey];
             if (typeof val === "string" || typeof val === "number" || typeof val === "boolean") return val;
             return safeArray(val);
         }
-        
+
+        // 2. Direct LocalStorage Check
         var raw = localStorage.getItem(fullKey);
 
-        // 🛡️ SANCHA & OLD SESSION FALLBACK (KABHI STOCK GAYAB NAHI HOGA)
+        // 3. Fallback Multi-Keys Check (Agar naye key me nahi mila toh purane se dhoondho)
         if (!raw || raw === "[]" || raw === "null") {
-            var oldKey = currentUserId + "_" + key;
-            var oldRaw = localStorage.getItem(oldKey);
-            if (oldRaw && oldRaw !== "[]") raw = oldRaw;
+            var candidateKeys = [
+                uid + "_" + key,                     // rajesh_kariger_list
+                uid + "_2026-2027_" + key,          // rajesh_2026-2027_kariger_list
+                "app_" + sess + "_" + key,          // app_2026-2027_kariger_list
+                "app_" + key,                       // app_kariger_list
+                sess + "_" + key,                   // 2026-2027_kariger_list
+                key                                 // kariger_list (plain)
+            ];
 
-            // Agar 2027-2028 me khali mila to 2026-2027 se uthao
-            if (!raw || raw === "[]") {
-                var prevSessKey = currentUserId + "_2026-2027_" + key;
-                var prevRaw = localStorage.getItem(prevSessKey);
-                if (prevRaw && prevRaw !== "[]") raw = prevRaw;
+            for (var c = 0; c < candidateKeys.length; c++) {
+                var cRaw = localStorage.getItem(candidateKeys[c]);
+                if (cRaw && cRaw !== "[]" && cRaw !== "null") {
+                    raw = cRaw;
+                    break;
+                }
+            }
+
+            // 4. Wildcard Search: Agar abhi bhi nahi mila toh poore LocalStorage me jahan bhi `_key` ho
+            if (!raw || raw === "[]" || raw === "null") {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var lk = localStorage.key(i);
+                    if (lk && (lk === key || lk.indexOf("_" + key) !== -1)) {
+                        var wRaw = localStorage.getItem(lk);
+                        if (wRaw && wRaw !== "[]" && wRaw !== "null") {
+                            raw = wRaw;
+                            break;
+                        }
+                    }
+                }
             }
         }
 
-        if (!raw) return [];
+        if (!raw || raw === "null") return [];
+
         var parsed = JSON.parse(raw);
         APP_MEMORY_CACHE[fullKey] = parsed;
-        idbPut(fullKey, parsed);
-        
+
         if (typeof parsed === "string" || typeof parsed === "number" || typeof parsed === "boolean") return parsed;
         return safeArray(parsed);
     } catch (e) {
@@ -159,7 +187,6 @@ function getStore(key) {
 
 function setStore(key, data) {
     if (isBackupPreviewMode) return;
-    if (!currentUserId) return;
 
     try {
         var fullKey = getStorageKey(key);
@@ -170,10 +197,11 @@ function setStore(key, data) {
         
         try { localStorage.setItem(fullKey, JSON.stringify(toSave)); } catch(err) {}
 
-        if (typeof db !== "undefined" && db && !isRemoteUpdating && currentUserId) {
+        var uid = getEffectiveUserId();
+        if (typeof db !== "undefined" && db && !isRemoteUpdating && uid && uid !== "app") {
             if (typeof showSyncStatus === "function") showSyncStatus("syncing");
-            var fbKey = fullKey.replace(currentUserId + "_", "");
-            db.ref("users/" + currentUserId + "/" + fbKey).set(toSave)
+            var fbKey = fullKey.replace(uid + "_", "");
+            db.ref("users/" + uid + "/" + fbKey).set(toSave)
                 .then(function() { if (typeof showSyncStatus === "function") showSyncStatus("online"); })
                 .catch(function() { if (typeof showSyncStatus === "function") showSyncStatus("error"); });
         }
