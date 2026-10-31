@@ -179,7 +179,7 @@
                 <div id="kariger-pagination-bar"></div>
             </div>
 
-            <!-- MODULE 1B: TANI KHATA SHEET (AAPKE PARCHI FORMAT KE EXACT HISAB SE) -->
+            <!-- MODULE 1B: TANI KHATA SHEET -->
             <div id="kariger-sheet-section" class="module-section" style="display:none;">
                 <div class="module-header">
                     <button class="back-btn" onclick="openKarigerModule()">← Kariger List</button>
@@ -192,7 +192,7 @@
 
                 <div id="sheet-tabs-container" class="sheet-tabs-bar" style="margin-bottom:14px;"></div>
 
-                <!-- 1. BANA/ZARI/BANI RATE & PICHLI CLOSING -->
+                <!-- 1. RATES & PICHLI CLOSING -->
                 <div class="tani-closing-grid" style="margin-bottom:12px;">
                     <div><label>Bana Rate/Saree</label><input type="number" step="0.001" id="rate-bana-input" onchange="saveCurrentSheetConfig()"></div>
                     <div><label>Zari Rate/Saree</label><input type="number" step="0.001" id="rate-zari-input" onchange="saveCurrentSheetConfig()"></div>
@@ -204,10 +204,12 @@
                     <div><label>Zari Waste</label><input type="number" step="0.01" id="waste-zari-input" onchange="saveCurrentSheetConfig()"></div>
                 </div>
 
-                <!-- 2. ITEM SELECTION (4 BOXES WITH BACHA STOCK) -->
+                <!-- 2. ITEM SELECTION: BANA, ZARI, TANI (3 BOX), CHUKKA (3 BOX) -->
                 <div style="background:#f1f5f9; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:14px;">
-                    <div style="font-weight:800; color:#1e293b; margin-bottom:8px;">📦 Item Selection:</div>
-                    <div class="form-row-4">
+                    <div style="font-weight:800; color:#1e293b; margin-bottom:10px;">📦 Item Selection:</div>
+                    
+                    <!-- Bana & Zari Item Select -->
+                    <div class="form-row-2" style="margin-bottom:10px;">
                         <div class="input-group">
                             <label style="color:#059669; font-weight:700;">1. Bana Select Item:</label>
                             <input type="text" id="line-bana-name" list="sheet-bana-dl" placeholder="Bana Item..." oninput="updateLiveStockDisplay()">
@@ -218,44 +220,64 @@
                             <input type="text" id="line-zari-name" list="sheet-zari-dl" placeholder="Zari Item..." oninput="updateLiveStockDisplay()">
                             <small id="live-zari-stock-badge" style="color:#ea580c; font-weight:700;">Bacha: 0.00 Kg</small>
                         </div>
+                    </div>
+
+                    <!-- Tani Selection (3 Boxes) -->
+                    <div class="form-row-3" style="margin-bottom:10px; background:#eff6ff; padding:8px; border-radius:8px;">
                         <div class="input-group">
                             <label style="color:#0284c7; font-weight:700;">3. Tani Select Item:</label>
-                            <input type="text" id="line-tani-item" list="sheet-sancha-dl" placeholder="Tani Item..." oninput="updateLiveStockDisplay()">
+                            <input type="text" id="sheet-tani-item" list="sheet-sancha-dl" placeholder="Tani Item..." oninput="updateLiveStockDisplay()" onchange="saveCurrentSheetConfig()">
                             <small id="live-tani-stock-badge" style="color:#0284c7; font-weight:700;">Bacha: 0.00 Kg</small>
                         </div>
                         <div class="input-group">
-                            <label style="color:#7c3aed; font-weight:700;">4. Chukka Select Item:</label>
-                            <input type="text" id="line-chukka-item" list="sheet-sancha-dl" placeholder="Chukka Item..." oninput="updateLiveStockDisplay()">
-                            <small id="live-chukka-stock-badge" style="color:#7c3aed; font-weight:700;">Bacha: 0.00 Kg</small>
+                            <label style="color:#0284c7; font-weight:700;">Sancha Name:</label>
+                            <input type="text" id="sheet-tani-sancha" placeholder="Sancha Naam..." onchange="saveCurrentSheetConfig()">
+                        </div>
+                        <div class="input-group">
+                            <label style="color:#0284c7; font-weight:700;">Wazan (Kg):</label>
+                            <input type="number" step="0.01" id="sheet-tani-wazan" placeholder="0.00" onchange="saveCurrentSheetConfig()">
                         </div>
                     </div>
+
+                    <!-- Chukka Selection (3 Boxes) -->
+                    <div class="form-row-3" style="background:#faf5ff; padding:8px; border-radius:8px;">
+                        <div class="input-group">
+                            <label style="color:#7c3aed; font-weight:700;">4. Chukka Select Item:</label>
+                            <input type="text" id="sheet-chukka-item" list="sheet-sancha-dl" placeholder="Chukka Item..." oninput="updateLiveStockDisplay()" onchange="saveCurrentSheetConfig()">
+                            <small id="live-chukka-stock-badge" style="color:#7c3aed; font-weight:700;">Bacha: 0.00 Kg</small>
+                        </div>
+                        <div class="input-group">
+                            <label style="color:#7c3aed; font-weight:700;">Sancha Name:</label>
+                            <input type="text" id="sheet-chukka-sancha" placeholder="Sancha Naam..." onchange="saveCurrentSheetConfig()">
+                        </div>
+                        <div class="input-group">
+                            <label style="color:#7c3aed; font-weight:700;">Wazan (Kg):</label>
+                            <input type="number" step="0.01" id="sheet-chukka-wazan" placeholder="0.00" onchange="saveCurrentSheetConfig()">
+                        </div>
+                    </div>
+
                     <datalist id="sheet-bana-dl"></datalist>
                     <datalist id="sheet-zari-dl"></datalist>
                     <datalist id="sheet-sancha-dl"></datalist>
                 </div>
 
-                <!-- 3. NICHE WALE ENTRY BOXES -->
+                <!-- 3. NICHE WALE ENTRY BOXES (TANI NAME & WAZAN HATAYA GAYA) -->
                 <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:14px;">
                     <div style="font-weight:800; color:#1e293b; margin-bottom:8px;">➕ Rozana Line Entry:</div>
                     <div class="form-row-4" style="margin-bottom:8px;">
                         <div class="input-group"><label>DATE</label><input type="date" id="row-date"></div>
-                        <div class="input-group"><label>TANI NAME</label><input type="text" id="row-taniname" placeholder="Tani-1"></div>
-                        <div class="input-group"><label style="color:#0284c7; font-weight:700;">TANI WAZAN</label><input type="number" step="0.01" id="row-taniwazan" placeholder="0.00"></div>
-                        <div class="input-group"><label style="color:#7c3aed; font-weight:700;">CHUKKA WAZAN</label><input type="number" step="0.01" id="row-chukkawazan" placeholder="0.00"></div>
-                    </div>
-                    <div class="form-row-4" style="margin-bottom:8px;">
                         <div class="input-group"><label style="color:#059669;">BANA</label><input type="number" step="0.01" id="row-cone" placeholder="0.00"></div>
                         <div class="input-group"><label style="color:#dc2626;">LESS TP</label><input type="number" step="0.01" id="row-lesstp" placeholder="0.00"></div>
                         <div class="input-group"><label style="color:#ea580c;">ZARI</label><input type="number" step="0.01" id="row-zariqty" placeholder="0.00"></div>
-                        <div class="input-group"><label style="color:#dc2626;">LESS TP (Topi)</label><input type="number" step="0.01" id="row-topi" placeholder="0.00"></div>
                     </div>
                     <div class="form-row-4" style="margin-bottom:8px;">
+                        <div class="input-group"><label style="color:#dc2626;">LESS TP (Topi)</label><input type="number" step="0.01" id="row-topi" placeholder="0.00"></div>
                         <div class="input-group"><label style="color:#2563eb;">SAREE</label><input type="number" id="row-saree" placeholder="0"></div>
                         <div class="input-group"><label style="color:#dc2626;">LOTT</label><input type="number" id="row-lott" placeholder="0"></div>
                         <div class="input-group"><label>PAID (₹)</label><input type="number" id="row-paid" placeholder="0"></div>
-                        <div class="input-group"><label style="color:#059669;">RET BANA</label><input type="number" step="0.01" id="row-retbana" placeholder="0.00"></div>
                     </div>
-                    <div class="form-row-2">
+                    <div class="form-row-3">
+                        <div class="input-group"><label style="color:#059669;">RET BANA</label><input type="number" step="0.01" id="row-retbana" placeholder="0.00"></div>
                         <div class="input-group"><label style="color:#ea580c;">RET ZARI</label><input type="number" step="0.01" id="row-retzari" placeholder="0.00"></div>
                         <div style="display:flex; align-items:flex-end;">
                             <button id="row-submit-btn" class="add-btn" style="width:100%; padding:10px; font-weight:800;" onclick="saveTaniRow()">+ Line Jodein & Stock Minus</button>
@@ -263,21 +285,18 @@
                     </div>
                 </div>
 
-                <!-- 4. LINE JUDNE WALE COLUMNS (12 COLUMNS WITH EDIT & DELETE) -->
+                <!-- 4. LINE JUDNE WALE COLUMNS (TANI NAME, TANI NO, WAZAN HATAYA GAYA) -->
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr style="background:#1e3a8a; color:white; font-size:12px;">
-                                <th>DATE</th><th>TANI NAME</th><th>TANI NO</th><th>WAZAN</th><th>NET BANA</th><th>NET ZARI</th><th>SAREE</th><th>LOTT SAREE</th><th>PAYMENT</th><th>RET BANA</th><th>RET ZARI</th><th>ACTION</th>
+                                <th>DATE</th><th>NET BANA</th><th>NET ZARI</th><th>SAREE</th><th>LOTT SAREE</th><th>PAYMENT</th><th>RET BANA</th><th>RET ZARI</th><th>ACTION</th>
                             </tr>
                         </thead>
                         <tbody id="sheet-table-body"></tbody>
                         <tfoot style="background:#f1f5f9; font-weight:800; border-top:2px solid #cbd5e1;">
                             <tr>
                                 <th>Total:</th>
-                                <th>-</th>
-                                <th>-</th>
-                                <th id="tot-tani-wazan">0.00</th>
                                 <th id="tot-bana-net" style="color:#059669;">0.00</th>
                                 <th id="tot-zari-net" style="color:#ea580c;">0.00</th>
                                 <th id="tot-saree">0</th>
@@ -291,7 +310,7 @@
                     </table>
                 </div>
 
-                <!-- 5. THREE SUMMARY CARDS (MAZDOORI, BANA & ZARI HISAB) -->
+                <!-- 5. THREE SUMMARY CARDS -->
                 <div style="display:flex; flex-direction:column; gap:14px; margin-top:16px; margin-bottom:24px;">
                     <div style="background:white; border:1px solid #c7d2fe; border-radius:12px; padding:16px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
                         <div style="font-weight:800; color:#1e3a8a; margin-bottom:12px; font-size:16px;">💰 Mazdoori Hisab:</div>
@@ -468,7 +487,7 @@
         </div>
     </div>
 
-    <!-- 3. MODALS (POPUPS) -->
+    <!-- 3. MODALS -->
     <div id="item-modal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <div class="modal-header"><h3 id="modal-item-title">Passbook</h3><button class="close-modal-btn" onclick="setDisplay('item-modal', 'none')">✕</button></div>
@@ -521,7 +540,7 @@
         </div>
     </div>
 
-    <!-- 4. ALL 15 MODULAR SCRIPTS -->
+    <!-- 4. MODULAR SCRIPTS -->
     <script src="core/utils.js"></script>
     <script src="core/storage.js"></script>
     <script src="core/database.js"></script>
