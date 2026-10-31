@@ -1,24 +1,51 @@
 /* ========================================================
-   SIMPLICITY ERP - SANCHA (LOOM TANI) UI & PASSBOOK ENGINE (FIXED)
+   SIMPLICITY ERP - SANCHA (TANI & CHUKKA) STOCK & PASSBOOK
    File: sancha/sancha-ui.js • Developed by Farhan Jawed
-   (Kariger Dropdown Selection, Edit Name & Live Holder Tracker)
 ======================================================== */
 
+var currentSanchaCategory = "tani"; // "tani" ya "chukka"
+var currentSanchaKarkhanaFilter = "all";
+var currentPassbookSanchaItem = "";
+
 function openSanchaModule() {
-    if (typeof hideAllSections === "function") hideAllSections();
-    setDisplay("sancha-section", "block");
+    var dView = document.getElementById("dashboard-view");
+    if (dView) dView.style.display = "none";
+    var sSec = document.getElementById("sancha-section");
+    if (sSec) sSec.style.display = "block";
+
     renderSanchaKarkhanaTabs();
+    populateSanchaExistingDropdown();
     renderSanchaTable();
 }
 
-// 1. KARKHANA TABS
+function switchSanchaCategory(cat) {
+    currentSanchaCategory = cat;
+    var tabT = document.getElementById("tab-sancha-tani");
+    var tabC = document.getElementById("tab-sancha-chukka");
+
+    if (tabT) tabT.className = (cat === "tani") ? "sheet-tab active" : "sheet-tab";
+    if (tabC) tabC.className = (cat === "chukka") ? "sheet-tab active" : "sheet-tab";
+
+    var rTani = document.getElementById("sancha-cat-tani");
+    var rChuk = document.getElementById("sancha-cat-chukka");
+    if (rTani && cat === "tani") rTani.checked = true;
+    if (rChuk && cat === "chukka") rChuk.checked = true;
+
+    populateSanchaExistingDropdown();
+    renderSanchaTable();
+}
+
 function renderSanchaKarkhanaTabs() {
     var bar = document.getElementById("sancha-karkhana-tabs-bar");
     if (!bar) return;
     bar.innerHTML = "";
+    var karkhanas = safeArray(getStore("karkhana_list"));
+    if (!karkhanas.length) karkhanas = [{ id: "k_main", name: "Main Godown", isDefault: true }];
 
-    var kList = getKarkhanasSafe();
-    kList.forEach(function(k) {
+    var allActive = (currentSanchaKarkhanaFilter === "all") ? " active" : "";
+    bar.innerHTML += "<button class='sheet-tab" + allActive + "' onclick='switchSanchaKarkhanaTab(\"all\")'>👥 Sabhi Karkhane</button>";
+
+    karkhanas.forEach(function(k) {
         var isActive = (String(currentSanchaKarkhanaFilter) === String(k.id)) ? " active" : "";
         bar.innerHTML += "<button class='sheet-tab" + isActive + "' onclick='switchSanchaKarkhanaTab(\"" + k.id + "\")'>🏭 " + k.name + "</button>";
     });
@@ -26,368 +53,261 @@ function renderSanchaKarkhanaTabs() {
 
 function switchSanchaKarkhanaTab(kId) {
     currentSanchaKarkhanaFilter = kId;
-    renderSanchaKarkhanaTabs();
+    populateSanchaExistingDropdown();
     renderSanchaTable();
 }
 
-// 2. LIVE HOLDER TRACKER: KAUN-KAUN SE KARIGER TANI LE GAYE HAIN
-function getSanchaHoldersSummary(itemName) {
-    var hist = safeArray(getStore("sancha_history")).filter(function(h) {
-        return h && h.name && h.name.toLowerCase() === itemName.toLowerCase() &&
-               (!h.karkhanaId || String(h.karkhanaId) === String(currentSanchaKarkhanaFilter));
-    });
-
-    var holderMap = {};
-    hist.forEach(function(h) {
-        var p = (h.person || "").trim().toUpperCase();
-        if (!p || p === "SANCHA PRODUCTION" || p === "SANCHA PAR BANI" || p === "GODAM" || p === "GODAM STOCK") return;
-
-        if (!holderMap[p]) holderMap[p] = 0;
-        var q = Number(h.qty) || 0;
-        var t = String(h.type || "");
-
-        if (t.indexOf("Le Gaya") !== -1 || t.indexOf("Out") !== -1 || t.indexOf("Diya") !== -1) {
-            holderMap[p] += q;
-        } else if (t.indexOf("Wapas") !== -1 || t.indexOf("Jama") !== -1) {
-            holderMap[p] -= q;
-        }
-    });
-
-    var summaryList = [];
-    for (var karigerName in holderMap) {
-        if (holderMap[karigerName] > 0) {
-            summaryList.push("<span class='badge-red' style='font-size:12px; display:inline-block; margin:2px 0;'>👤 <strong>" + karigerName + "</strong> (" + holderMap[karigerName] + " Tani)</span>");
-        }
-    }
-
-    if (!summaryList.length) {
-        return "<span class='badge-green' style='font-size:11px;'>🟢 Sabhi Tani Godam Me Hai</span>";
-    }
-    return summaryList.join("<br>");
-}
-
-// 3. SANCHA PAR NAYI TANI BANI (ADD TANI STOCK)
-function toggleAddSanchaItemForm() {
+function toggleAddSanchaForm() {
     var f = document.getElementById("add-sancha-item-form");
     if (!f) return;
     f.style.display = (f.style.display === "block") ? "none" : "block";
-    document.getElementById("sancha-date").value = getTodayDate();
-    cancelSanchaEdit();
+    var dInp = document.getElementById("sancha-date");
+    if (dInp) dInp.value = getTodayDate();
+    toggleSanchaFormOptions();
 }
 
-function cancelSanchaEdit() {
-    var eId = document.getElementById("sancha-edit-id");
-    if (eId) eId.value = "";
-    document.getElementById("sancha-name").value = "";
-    document.getElementById("sancha-qty").value = "";
-    var pInp = document.getElementById("sancha-person");
-    if (pInp) pInp.value = "";
-    var sBtn = document.getElementById("sancha-save-btn");
-    if (sBtn) sBtn.textContent = "Save Tani Stock";
+function toggleSanchaFormOptions() {
+    var isNew = document.getElementById("sancha-type-new")?.checked;
+    var exGroup = document.getElementById("sancha-existing-group");
+    var newGroup = document.getElementById("sancha-new-group");
+
+    if (exGroup) exGroup.style.display = isNew ? "none" : "block";
+    if (newGroup) newGroup.style.display = isNew ? "block" : "none";
+
+    var isChuk = document.getElementById("sancha-cat-chukka")?.checked;
+    currentSanchaCategory = isChuk ? "chukka" : "tani";
+    populateSanchaExistingDropdown();
 }
 
-function saveSanchaItem() {
-    var editId = (document.getElementById("sancha-edit-id") && document.getElementById("sancha-edit-id").value) || "";
-    var n = (document.getElementById("sancha-name") && document.getElementById("sancha-name").value || "").trim().toUpperCase();
-    var q = parseFloat(document.getElementById("sancha-qty") && document.getElementById("sancha-qty").value) || 0;
-    var d = (document.getElementById("sancha-date") && document.getElementById("sancha-date").value) || getTodayDate();
-    var p = (document.getElementById("sancha-person") && document.getElementById("sancha-person").value || "").trim().toUpperCase();
+function populateSanchaExistingDropdown() {
+    var sel = document.getElementById("sancha-select-existing");
+    if (!sel) return;
+    sel.innerHTML = "";
 
-    if (!n || q <= 0) return alert("Tani/Sancha ka naam aur kitni Tani bani (Qty) bharein!");
-
-    var list = getSanchaItems();
-    var isMain = (currentSanchaKarkhanaFilter === "k_main");
-
-    var existing = list.find(function(s) {
-        var matchK = isMain ? (!s.karkhanaId || s.karkhanaId === "k_main") : (String(s.karkhanaId) === String(currentSanchaKarkhanaFilter));
-        return s && matchK && s.name && s.name.toUpperCase() === n;
+    var list = safeArray(getStore("sancha_items")).filter(function(s) {
+        var cat = s.category || "tani";
+        return cat.toLowerCase() === currentSanchaCategory.toLowerCase();
     });
 
-    if (existing && !editId) {
-        existing.totalQty = (Number(existing.totalQty) || 0) + q;
-        existing.date = d;
-    } else if (editId) {
-        var it = list.find(function(x) { return String(x.id) === String(editId); });
-        if (it) {
-            it.name = n;
-            it.totalQty = q;
-            it.date = d;
+    var unique = [];
+    list.forEach(function(s) {
+        if (s && s.name && unique.indexOf(s.name.trim().toLowerCase()) === -1) {
+            unique.push(s.name.trim().toLowerCase());
+            var opt = document.createElement("option");
+            opt.value = s.name.trim();
+            opt.textContent = s.name.trim();
+            sel.appendChild(opt);
         }
+    });
+}
+
+function saveNewSanchaStock() {
+    var isNew = document.getElementById("sancha-type-new")?.checked;
+    var name = isNew 
+        ? (document.getElementById("sancha-new-name")?.value || "").trim() 
+        : (document.getElementById("sancha-select-existing")?.value || "").trim();
+
+    var date = (document.getElementById("sancha-date") && document.getElementById("sancha-date").value) || getTodayDate();
+    var qty = parseFloat(document.getElementById("sancha-qty")?.value) || 0;
+    var person = (document.getElementById("sancha-person")?.value || "").trim();
+    var isChuk = document.getElementById("sancha-cat-chukka")?.checked;
+    var category = isChuk ? "chukka" : "tani";
+
+    if (!name) return alert("Sancha Item ka naam zaroori hai!");
+    if (qty <= 0) return alert("Wazan (Qty Kg me) daalein!");
+
+    var kId = (currentSanchaKarkhanaFilter !== "all") ? currentSanchaKarkhanaFilter : "k_main";
+    var list = safeArray(getStore("sancha_items"));
+    var item = list.find(function(x) { 
+        var cat = x.category || "tani";
+        return x && x.name && x.name.toLowerCase() === name.toLowerCase() && cat.toLowerCase() === category.toLowerCase() && (String(x.karkhanaId) === String(kId) || !x.karkhanaId); 
+    });
+
+    if (item) {
+        item.aaya = Number(((Number(item.aaya) || 0) + qty).toFixed(2));
+        item.bacha = Number(((Number(item.aaya) || 0) - (Number(item.gaya) || 0)).toFixed(2));
+        if (person) item.person = person;
     } else {
         list.push({
             id: "sancha_" + Date.now(),
-            name: n,
-            totalQty: q,
-            date: d,
-            karkhanaId: currentSanchaKarkhanaFilter || "k_main"
+            date: date,
+            name: name,
+            category: category,
+            aaya: qty,
+            gaya: 0,
+            bacha: qty,
+            person: person || "-",
+            karkhanaId: kId
         });
     }
+    setStore("sancha_items", list);
 
-    saveSanchaItems(list);
-
-    // History log
-    var h = safeArray(getStore("sancha_history"));
-    h.push({
-        id: "sh_" + Date.now(),
-        name: n,
-        date: d,
-        type: "Sancha Par Tani Bani (+ In)",
-        qty: q,
-        person: p || "Sancha Production",
-        karkhanaId: currentSanchaKarkhanaFilter,
-        note: q + " Tani Tayyar Hokar Stock Me Aayi"
+    var hist = safeArray(getStore("sancha_history"));
+    hist.push({
+        id: "shist_" + Date.now(),
+        date: date,
+        name: name,
+        category: category,
+        kariger: person || "Factory Inward",
+        type: "Khareed / Inward (" + (category === "tani" ? "Tani" : "Chukka") + ")",
+        aaya: qty,
+        gaya: 0,
+        karkhanaId: kId
     });
-    setStore("sancha_history", h);
+    setStore("sancha_history", hist);
 
-    toggleAddSanchaItemForm();
+    if (document.getElementById("sancha-new-name")) document.getElementById("sancha-new-name").value = "";
+    if (document.getElementById("sancha-qty")) document.getElementById("sancha-qty").value = "";
+    if (document.getElementById("sancha-person")) document.getElementById("sancha-person").value = "";
+    toggleAddSanchaForm();
+    populateSanchaExistingDropdown();
     renderSanchaTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("✅ " + q + " Tani stock me jud gayi!");
-}
-
-// 4. SANCHA TABLE RENDERING
-function renderSanchaTable(flist) {
-    var tableEl = document.querySelector("#sancha-section table");
-    if (!tableEl) return;
-
-    tableEl.innerHTML = 
-        "<thead>" +
-            "<tr style='background:#0284c7; color:white;'>" +
-                "<th>Tarikh</th>" +
-                "<th>Sancha / Tani Ka Naam</th>" +
-                "<th>Kul Tani Bani</th>" +
-                "<th>Kaun Kariger Le Gaya (Loom Par)</th>" +
-                "<th>Bachi Tani (Ready Stock)</th>" +
-                "<th style='text-align:center;'>Action</th>" +
-            "</tr>" +
-        "</thead>" +
-        "<tbody id='sancha-table-body'></tbody>";
-
-    var tbody = document.getElementById("sancha-table-body");
-    var kName = getKarkhanaNameById(currentSanchaKarkhanaFilter);
-    var isMain = (currentSanchaKarkhanaFilter === "k_main");
-    var allItems = flist || getSanchaItems();
-
-    var filtered = allItems.filter(function(s) {
-        return isMain ? (!s.karkhanaId || s.karkhanaId === "k_main") : (String(s.karkhanaId) === String(currentSanchaKarkhanaFilter));
-    });
-
-    var totReady = 0;
-    filtered.forEach(function(s) {
-        totReady += getSanchaItemStats(s.id, s.name, currentSanchaKarkhanaFilter).bachiTani;
-    });
-
-    var elVal = document.getElementById("sancha-opening-val");
-    if (elVal) elVal.textContent = totReady + " Tani Tayyar Bachi Hai (" + kName + ")";
-
-    if (!filtered.length) {
-        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px; color:#888;'>Is Godam (" + kName + ") me koi Tani nahi bani hai.</td></tr>";
-        return;
-    }
-
-    var html = "";
-    filtered.forEach(function(s) {
-        var st = getSanchaItemStats(s.id, s.name, currentSanchaKarkhanaFilter);
-        var holdersHtml = getSanchaHoldersSummary(s.name);
-
-        html += "<tr>" +
-            "<td>" + formatDateDisplay(s.date) + "</td>" +
-            "<td><strong>" + s.name + "</strong></td>" +
-            "<td style='font-weight:700;'>+" + st.totalBani + " Tani</td>" +
-            "<td>" + holdersHtml + "</td>" +
-            "<td><strong style='color:#0284c7; font-size:15px;'>" + st.bachiTani + " Tani Bachi</strong></td>" +
-            "<td style='text-align:center; white-space:nowrap;'>" +
-                "<button class='quick-btn btn-out' onclick='allotSanchaToKariger(\"" + s.id + "\")'>📤 Kariger Tani Le Gaya</button> " +
-                "<button class='quick-btn btn-in' onclick='returnSanchaFromKariger(\"" + s.id + "\")'>📥 Wapas Aayi</button> " +
-                "<button class='detail-btn' style='background:#0284c7;' onclick='viewSanchaPassbook(\"" + s.name + "\")'>📖 Passbook</button> " +
-                "<button class='delete-btn' onclick='deleteSanchaItem(\"" + s.id + "\")'>🗑️</button>" +
-            "</td>" +
-        "</tr>";
-    });
-    tbody.innerHTML = html;
+    alert("✅ Sancha (" + (category === "tani" ? "Tani" : "Chukka") + ") Stock me jama ho gaya!");
 }
 
 function filterSancha() {
+    renderSanchaTable();
+}
+
+function renderSanchaTable() {
+    var tbody = document.getElementById("sancha-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    var list = safeArray(getStore("sancha_items")).filter(function(s) {
+        var cat = s.category || "tani";
+        return cat.toLowerCase() === currentSanchaCategory.toLowerCase();
+    });
+
+    if (currentSanchaKarkhanaFilter !== "all") {
+        list = list.filter(function(s) {
+            return String(s.karkhanaId) === String(currentSanchaKarkhanaFilter) || (!s.karkhanaId && currentSanchaKarkhanaFilter === "k_main");
+        });
+    }
+
     var txt = (document.getElementById("search-sancha-input") && document.getElementById("search-sancha-input").value || "").toLowerCase().trim();
-    if (!txt) {
-        renderSanchaTable();
-        return;
-    }
-    var filtered = getSanchaItems().filter(function(s) {
-        return (String(s.name || "")).toLowerCase().indexOf(txt) !== -1;
-    });
-    renderSanchaTable(filtered);
-}
-
-// 5. 📤 KARIGER TANI LE GAYA (SMART KARIGER SELECTION)
-function allotSanchaToKariger(itemId) {
-    var it = getSanchaItems().find(function(x) { return String(x.id) === String(itemId); });
-    if (!it) return;
-
-    var st = getSanchaItemStats(it.id, it.name, currentSanchaKarkhanaFilter);
-    if (st.bachiTani <= 0) {
-        return alert("⚠️ Is quality ki ek bhi Tani tayyar nahi bachi hai!");
+    if (txt) {
+        list = list.filter(function(s) {
+            return (String(s.name || "") + " " + String(s.person || "") + " " + String(s.date || "")).toLowerCase().indexOf(txt) !== -1;
+        });
     }
 
-    var karList = sanitizeKarigerList();
-    var karNames = karList.map(function(k, idx) { return (idx + 1) + ". " + k.name; }).join("\n");
-    
-    var promptMsg = "Kaun sa Kariger Tani le gaya?\nKariger ka Asali Naam likhein (Jaise: Salman):\n\nRegistered Karigers:\n" + (karNames || "Koi nahi");
-    var kariger = prompt(promptMsg);
-    if (!kariger || !kariger.trim()) return;
-
-    var cleanName = kariger.trim().toUpperCase();
-    if (cleanName === "KARIGER") {
-        cleanName = prompt("⚠️ 'KARIGER' nahi, Kariger ka Asali Naam likhein (Jaise: SALMAN):", "SALMAN");
-        if (!cleanName || !cleanName.trim()) return;
-        cleanName = cleanName.trim().toUpperCase();
-    }
-
-    var q = parseInt(prompt(cleanName + " kitni Tani le gaya (Pcs/Tani):", "1"), 10);
-    if (!q || q <= 0) return;
-
-    if (q > st.bachiTani) {
-        return alert("⚠️ Godam me sirf " + st.bachiTani + " Tani bachi hai! Utna nahi de sakte.");
-    }
-
-    var d = prompt("Tarikh (YYYY-MM-DD):", getTodayDate()) || getTodayDate();
-
-    var h = safeArray(getStore("sancha_history"));
-    h.push({
-        id: "sh_" + Date.now(),
-        itemId: it.id,
-        name: it.name,
-        date: d,
-        type: "Kariger Tani Le Gaya (- Out)",
-        qty: q,
-        person: cleanName,
-        karkhanaId: currentSanchaKarkhanaFilter,
-        note: cleanName + " loom par chadhane ke liye le gaya"
-    });
-    setStore("sancha_history", h);
-
-    renderSanchaTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("✅ " + q + " Tani " + cleanName + " ke naam darj hui aur Stock se ghat gayi!");
-}
-
-// 6. 📥 TANI WAPAS AAYI
-function returnSanchaFromKariger(itemId) {
-    var it = getSanchaItems().find(function(x) { return String(x.id) === String(itemId); });
-    if (!it) return;
-
-    var kariger = prompt("Kis Kariger ne Tani wapas ki (Kariger Ka Asali Naam, jaise SALMAN):");
-    if (!kariger || !kariger.trim()) return;
-
-    var cleanName = kariger.trim().toUpperCase();
-    var q = parseInt(prompt(cleanName + " ne kitni Tani wapas loutayi:", "1"), 10);
-    if (!q || q <= 0) return;
-
-    var d = prompt("Tarikh (YYYY-MM-DD):", getTodayDate()) || getTodayDate();
-
-    var h = safeArray(getStore("sancha_history"));
-    h.push({
-        id: "sh_" + Date.now(),
-        itemId: it.id,
-        name: it.name,
-        date: d,
-        type: "Tani Wapas Aayi (+ In)",
-        qty: q,
-        person: cleanName,
-        karkhanaId: currentSanchaKarkhanaFilter,
-        note: cleanName + " se wapas stock me aayi"
-    });
-    setStore("sancha_history", h);
-
-    renderSanchaTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("✅ " + q + " Tani Godam me wapas jud gayi!");
-}
-
-// 7. 📖 SANCHA (TANI) PASSBOOK WITH EDIT & DELETE
-function viewSanchaPassbook(itemName) {
-    var titleEl = document.getElementById("modal-item-title");
-    if (titleEl) titleEl.textContent = "📖 Sancha / Tani Passbook: " + itemName + " (" + getKarkhanaNameById(currentSanchaKarkhanaFilter) + ")";
-
-    var modalTable = document.querySelector("#item-modal table");
-    if (!modalTable) return;
-
-    modalTable.innerHTML = 
-        "<thead>" +
-            "<tr style='background:#0284c7; color:white;'>" +
-                "<th>Tarikh</th>" +
-                "<th>Kariger Ka Naam (Loom)</th>" +
-                "<th>Vivran (Tani Status)</th>" +
-                "<th>Kitni Tani</th>" +
-                "<th style='text-align:center;'>Action</th>" +
-            "</tr>" +
-        "</thead>" +
-        "<tbody id='modal-history-body'></tbody>";
-
-    var tbody = document.getElementById("modal-history-body");
-
-    var hist = safeArray(getStore("sancha_history")).filter(function(h) {
-        return h && h.name && h.name.toLowerCase() === itemName.toLowerCase() &&
-               (!h.karkhanaId || String(h.karkhanaId) === String(currentSanchaKarkhanaFilter));
-    });
-
-    if (!hist.length) {
-        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; color:#888;'>Is Tani ka koi lenden nahi mila.</td></tr>";
+    var totalBacha = 0;
+    if (!list.length) {
+        tbody.innerHTML = "<tr><td colspan='8' style='text-align:center; padding:15px; color:#888;'>Koi " + (currentSanchaCategory === "tani" ? "Tani" : "Chukka") + " Stock nahi mila.</td></tr>";
     } else {
-        hist.forEach(function(r) {
-            var isOut = String(r.type).indexOf("Le Gaya") !== -1 || String(r.type).indexOf("Out") !== -1;
-            var personDisplay = (r.person || "Sancha Production").trim();
+        list.forEach(function(s) {
+            if (!s) return;
+            var bacha = Number(s.bacha !== undefined ? s.bacha : (s.aaya || 0));
+            totalBacha += bacha;
 
             tbody.innerHTML += "<tr>" +
-                "<td>" + formatDateDisplay(r.date) + "</td>" +
-                "<td><strong style='color:#1e3a8a; font-size:13px;'>👤 " + personDisplay + "</strong></td>" +
-                "<td>" + r.type + "</td>" +
-                "<td style='font-weight:700; color:" + (isOut ? "#dc2626" : "#059669") + "; font-size:13px;'>" + (isOut ? "-" : "+") + r.qty + " Tani</td>" +
-                "<td style='text-align:center; white-space:nowrap;'>" +
-                    "<button class='edit-btn' onclick='editSanchaPersonName(\"" + r.id + "\", \"" + itemName + "\")'>✏️ Naam Badlein</button> " +
-                    "<button class='delete-btn' onclick='deleteSanchaHistoryEntry(\"" + r.id + "\", \"" + itemName + "\")'>🗑️ Delete</button>" +
-                "</td>" +
+                "<td>" + (s.date || "-") + "</td>" +
+                "<td><span class='badge-blue'>" + (s.category === "chukka" ? "⚙️ Chukka" : "🧵 Tani") + "</span></td>" +
+                "<td><strong>" + s.name + "</strong></td>" +
+                "<td style='color:#059669; font-weight:700;'>" + Number(s.aaya || 0).toFixed(2) + "</td>" +
+                "<td style='color:#ea580c; font-weight:700;'>" + Number(s.gaya || 0).toFixed(2) + "</td>" +
+                "<td style='font-weight:800; color:#0284c7;'>" + bacha.toFixed(2) + " Kg</td>" +
+                "<td>" + (s.person || "-") + "</td>" +
+                "<td style='text-align:center;'><button class='sheet-btn' style='background:#0284c7;' onclick='openSanchaPassbook(\"" + s.name + "\")'>📖 Passbook</button></td>" +
             "</tr>";
         });
     }
 
-    setDisplay("item-modal", "flex");
+    var opVal = document.getElementById("sancha-opening-val");
+    if (opVal) opVal.textContent = totalBacha.toFixed(2) + " Kg Kul " + (currentSanchaCategory === "tani" ? "Tani" : "Chukka") + " Bacha";
 }
 
-// 8. PURANI ENTRY KA NAAM BADALNA (AGAR "KARIGER" LIKHA THA TO "SALMAN" KARO)
-function editSanchaPersonName(hId, itemName) {
-    var hist = safeArray(getStore("sancha_history"));
-    var entry = hist.find(function(x) { return String(x.id) === String(hId); });
-    if (!entry) return;
+// ================= SANCHA PASSBOOK ENGINE =================
 
-    var newName = prompt("Is entry me Kariger ka sahi naam daalein (Jaise: SALMAN):", (entry.person || "SALMAN"));
-    if (!newName || !newName.trim()) return;
+function openSanchaPassbook(itemName) {
+    currentPassbookSanchaItem = itemName;
+    var modal = document.getElementById("item-modal");
+    if (!modal) return;
 
-    entry.person = newName.trim().toUpperCase();
-    entry.note = entry.person + " le gaya/loutaya";
-    setStore("sancha_history", hist);
+    var title = document.getElementById("modal-item-title");
+    if (title) title.textContent = "📖 Sancha Passbook: " + itemName + " (" + (currentSanchaCategory === "tani" ? "Tani" : "Chukka") + ")";
 
-    viewSanchaPassbook(itemName);
-    renderSanchaTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("✅ Naam update hokar " + entry.person + " ho gaya!");
+    var modalBody = modal.querySelector(".modal-body");
+    if (modalBody) {
+        modalBody.innerHTML = 
+            "<div style='background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:12px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;'>" +
+                "<div style='display:flex; gap:8px; align-items:center; flex-wrap:wrap;'>" +
+                    "<div><label style='font-size:12px; font-weight:700;'>From Date:</label><br><input type='date' id='sancha-pass-from-date' onchange='renderSanchaPassbookRows()'></div>" +
+                    "<div><label style='font-size:12px; font-weight:700;'>To Date:</label><br><input type='date' id='sancha-pass-to-date' onchange='renderSanchaPassbookRows()'></div>" +
+                    "<div style='align-self:flex-end;'><button class='quick-btn btn-out' onclick='resetSanchaPassbookFilters()'>Reset</button></div>" +
+                "</div>" +
+                "<div style='flex:1; min-width:200px;'>" +
+                    "<label style='font-size:12px; font-weight:700;'>🔍 Search Any Column:</label><br>" +
+                    "<input type='text' id='sancha-pass-search-input' class='search-box' placeholder='Search Date, Kariger, Qty...' oninput='renderSanchaPassbookRows()'>" +
+                "</div>" +
+            "</div>" +
+            "<div class='table-responsive'>" +
+                "<table>" +
+                    "<thead>" +
+                        "<tr style='background:#0284c7; color:white; font-size:12px;'>" +
+                            "<th>TARIKH</th><th>DETAIL (TYPE)</th><th>KARIGER / PERSON</th><th>AAYA (Kg)</th><th>GAYA (Kg)</th><th>ACTION</th>" +
+                        "</tr>" +
+                    "</thead>" +
+                    "<tbody id='sancha-passbook-table-body'></tbody>" +
+                "</table>" +
+            "</div>";
+    }
+
+    modal.style.display = "flex";
+    renderSanchaPassbookRows();
 }
 
-function deleteSanchaHistoryEntry(hId, itemName) {
-    if (!confirm("Kya aap is entry ko delete karna chahte hain?")) return;
-    var hist = safeArray(getStore("sancha_history")).filter(function(x) { return String(x.id) !== String(hId); });
-    setStore("sancha_history", hist);
-
-    viewSanchaPassbook(itemName);
-    renderSanchaTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("✅ Entry delete ho gayi!");
+function resetSanchaPassbookFilters() {
+    var fDate = document.getElementById("sancha-pass-from-date");
+    var tDate = document.getElementById("sancha-pass-to-date");
+    var sInp = document.getElementById("sancha-pass-search-input");
+    if (fDate) fDate.value = "";
+    if (tDate) tDate.value = "";
+    if (sInp) sInp.value = "";
+    renderSanchaPassbookRows();
 }
 
-function deleteSanchaItem(id) {
-    if (!confirm("Kya aap is Tani item ko delete karna chahte hain?")) return;
-    var list = getSanchaItems().filter(function(x) { return String(x.id) !== String(id); });
-    saveSanchaItems(list);
-    renderSanchaTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-}
+function renderSanchaPassbookRows() {
+    var tbody = document.getElementById("sancha-passbook-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    var hist = safeArray(getStore("sancha_history")).filter(function(x) {
+        return x && x.name && x.name.toLowerCase() === currentPassbookSanchaItem.toLowerCase();
+    });
+
+    var fDate = document.getElementById("sancha-pass-from-date")?.value;
+    var tDate = document.getElementById("sancha-pass-to-date")?.value;
+    var sTxt = (document.getElementById("sancha-pass-search-input")?.value || "").toLowerCase().trim();
+
+    if (fDate) hist = hist.filter(function(x) { return x.date >= fDate; });
+    if (tDate) hist = hist.filter(function(x) { return x.date <= tDate; });
+
+    if (sTxt) {
+        hist = hist.filter(function(x) {
+            var fullRow = (String(x.date || "") + " " + String(x.type || "") + " " + String(x.kariger || "") + " " + String(x.aaya || x.qty || "") + " " + String(x.gaya || "")).toLowerCase();
+            return fullRow.indexOf(sTxt) !== -1;
+        });
+    }
+
+    if (!hist.length) {
+        tbody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:15px; color:#888;'>Koi entry nahi mili.</td></tr>";
+        return;
+    }
+
+    hist.forEach(function(r) {
+        var aayaQty = Number(r.aaya || r.qty || r.wazan || 0);
+        var gayaQty = Number(r.gaya || 0);
+
+        var isKarigerEntry = r.refId || (r.type && r.type.toLowerCase().indexOf("kariger") !== -1);
+        var karigerDisplay = (r.kariger && r.kariger !== "-" && r.kariger !== "undefined") ? ("👤 " + r.kariger) : "📦 Factory Inward";
+
+        var actBtn = isKarigerEntry 
+            ? "<span style='color:#64748b; font-size:11px; font-weight:700;'>🔒 Kariger Khata</span>"
+            : ("<button class='delete-btn' onclick='deleteSanchaPurchase(\"" + r.id + "\", " + aayaQty + ")'>🗑️ Delete</button>");
+
+        tbody.innerHTML += "<tr>" +
+            "<td>" + (r.date || "-") + "</td>" +
+            "<td><strong>" + (r.type || "Godam Inward") + "</strong></td>" +
+            "<td style='color:#1e3a8a; font-weight:700;'>" + karigerDisplay + "</td>" +
