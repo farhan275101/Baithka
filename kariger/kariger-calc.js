@@ -19,54 +19,63 @@ function saveKarigerSheets(karigerId, sheets) {
 
 function calculateSheetTotals(sh) {
     var def = { 
-        totSaree: 0, totNetBana: 0, totNetZari: 0, totPaid: 0, 
-        totRetBana: 0, totRetZari: 0, grossBani: 0,
-        remainingBana: 0, remainingZari: 0, remainingAmt: 0 
+        totSaree: 0, totLott: 0, netSaree: 0, grossBani: 0, totPaid: 0, remainingAmt: 0, 
+        totTaniWazan: 0, totBana: 0, retBana: 0, banaConsumption: 0, banaWaste: 0, remainingBana: 0, 
+        totZari: 0, retZari: 0, zariConsumption: 0, zariWaste: 0, remainingZari: 0 
     };
     if (!sh || typeof sh !== "object") return def;
 
-    var sPcs = 0, nBana = 0, nZari = 0, paid = 0, retB = 0, retZ = 0;
-
+    var saree = 0, lott = 0, paid = 0, netB = 0, retB = 0, netZ = 0, retZ = 0, taniW = 0;
     safeArray(sh.rows).forEach(function(r) {
         if (!r) return;
-        sPcs += (Number(r.saree) || 0);
-        nBana += (Number(r.netBana) || 0);
-        nZari += (Number(r.netZari) || 0);
+        saree += (Number(r.saree) || 0);
+        lott += (Number(r.lott) || 0);
         paid += (Number(r.paid) || 0);
+        netB += (Number(r.netBana) || 0);
         retB += (Number(r.retBana) || 0);
+        netZ += (Number(r.netZari) || 0);
         retZ += (Number(r.retZari) || 0);
+        taniW += (Number(r.taniWazan) || 0);
     });
 
-    var rBana = Number(sh.rateBana) || 0.311;
-    var rZari = Number(sh.rateZari) || 0.110;
-    var rBani = Number(sh.rateBani) || 240;
+    // 1. Mazdoori Hisab
+    var netSaree = Math.max(0, saree - lott);
+    var rateBani = (sh.rateBani !== undefined) ? Number(sh.rateBani) : 240;
+    var grossBani = netSaree * rateBani;
+    var pichlaBani = Number(sh.pichlaBani) || 0;
+    var remAmt = (grossBani + pichlaBani) - paid;
 
-    var pBana = Number(sh.pichlaBana) || 0;
-    var pZari = Number(sh.pichlaZari) || 0;
-    var pBani = Number(sh.pichlaBani) || 0;
+    // 2. Bana Hisab
+    var rateB = (sh.rateBana !== undefined) ? Number(sh.rateBana) : 0.311;
+    var banaCons = saree * rateB;
+    var pichlaB = Number(sh.pichlaBana) || 0;
+    var bWaste = Number(sh.banaWaste) || 0;
+    var remBana = (pichlaB + netB) - (retB + banaCons + bWaste);
 
-    var wBana = Number(sh.banaWaste) || 0;
-    var wZari = Number(sh.zariWaste) || 0;
-
-    var expBana = (sPcs * rBana) + wBana;
-    var expZari = (sPcs * rZari) + wZari;
-
-    var remBana = (pBana + nBana) - (expBana + retB);
-    var remZari = (pZari + nZari) - (expZari + retZ);
-
-    var grossBani = sPcs * rBani;
-    var remAmt = (pBani + grossBani) - paid;
+    // 3. Zari Hisab
+    var rateZ = (sh.rateZari !== undefined) ? Number(sh.rateZari) : 0.110;
+    var zariCons = saree * rateZ;
+    var pichlaZ = Number(sh.pichlaZari) || 0;
+    var zWaste = Number(sh.zariWaste) || 0;
+    var remZari = (pichlaZ + netZ) - (retZ + zariCons + zWaste);
 
     return {
-        totSaree: sPcs,
-        totNetBana: Number(nBana.toFixed(2)),
-        totNetZari: Number(nZari.toFixed(2)),
-        totPaid: Number(paid.toFixed(2)),
-        totRetBana: Number(retB.toFixed(2)),
-        totRetZari: Number(retZ.toFixed(2)),
-        grossBani: Number(grossBani.toFixed(2)),
+        totSaree: saree,
+        totLott: lott,
+        netSaree: netSaree,
+        grossBani: grossBani,
+        totPaid: paid,
+        remainingAmt: remAmt,
+        totTaniWazan: Number(taniW.toFixed(2)),
+        totBana: Number(netB.toFixed(2)),
+        retBana: Number(retB.toFixed(2)),
+        banaConsumption: Number(banaCons.toFixed(2)),
+        banaWaste: bWaste,
         remainingBana: Number(remBana.toFixed(2)),
-        remainingZari: Number(remZari.toFixed(2)),
-        remainingAmt: Number(remAmt.toFixed(2))
+        totZari: Number(netZ.toFixed(2)),
+        retZari: Number(retZ.toFixed(2)),
+        zariConsumption: Number(zariCons.toFixed(2)),
+        zariWaste: zWaste,
+        remainingZari: Number(remZari.toFixed(2))
     };
 }
