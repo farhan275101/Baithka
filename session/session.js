@@ -1,91 +1,79 @@
 /* ========================================================
-   SIMPLICITY ERP - FIREBASE CLOUD & REALTIME SYNC (FIXED)
-   File: core/database.js • Developed by Farhan Jawed
+   SIMPLICITY ERP - FINANCIAL YEAR SESSION CONTROLLER
+   File: session/session.js • Developed by Farhan Jawed
 ======================================================== */
 
-const firebaseConfig = {
-    apiKey: "AIzaSyDkLlLPFnZexLWxtvqg3UiE9XG_IclaSAk",
-    authDomain: "simplicity-erp.firebaseapp.com",
-    databaseURL: "https://simplicity-erp-default-rtdb.firebaseio.com",
-    projectId: "simplicity-erp",
-    storageBucket: "simplicity-erp.firebasestorage.app",
-    messagingSenderId: "261724969835",
-    appId: "1:261724969835:web:23a073ab544f55679f0a2e",
-    measurementId: "G-9TS8H04N4N"
-};
-
-var db = null;
-
-try {
-    if (typeof firebase !== "undefined") {
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        console.log("✅ Cloud Connected!");
-    }
-} catch (error) {
-    console.error("Firebase Init Error:", error);
+function getSafeUserId() {
+    return (typeof currentUserId !== "undefined" && currentUserId) ? String(currentUserId) : "app";
 }
 
-function showSyncStatus(status) {
-    var badge = document.getElementById("cloud-status-badge");
-    if (!badge) return;
+function getAppSessions() {
+    var userKey = getSafeUserId() + "_app_sessions_list";
+    var raw = localStorage.getItem(userKey);
+    var list = [];
+    try { list = JSON.parse(raw) || []; } catch (e) {}
+    if (!Array.isArray(list) || !list.length) {
+        list = ["2026-2027"];
+        localStorage.setItem(userKey, JSON.stringify(list));
+    }
+    return list.map(function(s) { return String(s).replace(/['"]+/g, '').trim(); });
+}
 
-    if (typeof isBackupPreviewMode !== "undefined" && isBackupPreviewMode) {
-        badge.className = "sync-badge";
-        badge.style.background = "#fef08a"; badge.style.color = "#854d0e";
-        badge.innerHTML = "👁️ Preview Mode";
+function getActiveFinancialSession() {
+    var userKey = getSafeUserId() + "_app_active_session";
+    var sess = localStorage.getItem(userKey);
+    if (!sess || typeof sess !== "string" || sess === "[]") {
+        var list = getAppSessions();
+        sess = list[list.length - 1] || "2026-2027";
+        localStorage.setItem(userKey, sess);
+    }
+    return String(sess).replace(/['"]+/g, '').trim() || "2026-2027";
+}
+
+function populateSessionDropdown() {
+    var sel = document.getElementById("app-session-select");
+    if (!sel) return;
+    sel.innerHTML = "";
+    var sessions = getAppSessions();
+    var activeSess = getActiveFinancialSession();
+    sessions.forEach(function(s) {
+        var opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = "📅 " + s;
+        if (String(s) === String(activeSess)) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function switchAppFinancialSession(targetSession) {
+    var activeSess = getActiveFinancialSession();
+    if (!targetSession || targetSession === activeSess) return;
+
+    if (!confirm("Kya aap Session badal kar '" + targetSession + "' me jana chahte hain?")) {
+        populateSessionDropdown();
         return;
     }
 
-    if (status === "syncing") {
-        badge.className = "sync-badge sync-syncing";
-        badge.innerHTML = "🔄 Syncing...";
-    } else if (status === "offline") {
-        badge.className = "sync-badge";
-        badge.style.background = "#fff7ed"; badge.style.color = "#ea580c";
-        badge.innerHTML = "🟠 Offline Mode";
+    var cleanTarget = String(targetSession).replace(/['"]+/g, '').trim();
+    localStorage.setItem(getSafeUserId() + "_app_active_session", cleanTarget);
+    if (typeof clearMemoryCache === "function") clearMemoryCache();
+    if (typeof setStore === "function") setStore("app_active_session", cleanTarget);
+
+    if (typeof initIndexedDBPreload === "function") {
+        initIndexedDBPreload(function() {
+            populateSessionDropdown();
+            if (typeof backToDashboard === "function") backToDashboard();
+            if (typeof renderKarigerTable === "function") renderKarigerTable();
+            if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
+        });
     } else {
-        badge.className = "sync-badge";
-        badge.style.background = "#ecfdf5"; badge.style.color = "#059669";
-        badge.innerHTML = "🟢 Cloud Synced";
+        populateSessionDropdown();
+        if (typeof backToDashboard === "function") backToDashboard();
+        if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
     }
 }
 
-// 🔒 FIREBASE LISTENER (SESSION REVERT SHIELD FIXED)
-function initFirebaseLiveListeners() {
-    if (!db || !currentUserId) return;
-
-    try {
-        db.ref("users/" + currentUserId).on("value", function(snapshot) {
-            if (typeof isBackupPreviewMode !== "undefined" && isBackupPreviewMode) return;
-            
-            var val = snapshot.val();
-            if (val) {
-                isRemoteUpdating = true;
-                
-                for (var k in val) {
-                    // ⚠️ ASALI FIX: Firebase ko user ka active session pichhe se palatne mat do!
-                    if (k === "app_active_session") {
-                        continue; 
-                    }
-
-                    try {
-                        var itemData = Array.isArray(val[k]) ? safeArray(val[k]) : val[k];
-                        var fullKey = currentUserId + "_" + k;
-                        APP_MEMORY_CACHE[fullKey] = itemData;
-                        if (typeof idbPut === "function") idbPut(fullKey, itemData);
-                        try { localStorage.setItem(fullKey, JSON.stringify(itemData)); } catch(e) {}
-                    } catch (e) {}
-                }
-                
-                isRemoteUpdating = false;
-
-                if (typeof triggerActiveSectionRefresh === "function") {
-                    triggerActiveSectionRefresh();
-                }
-
-                showSyncStatus("online");
-            }
-        });
-    } catch (e) {}
-}
+// Page load hone par Session dropdown auto-load ho jaye
+document.addEventListener("DOMContentLoaded", function() {
+    populateSessionDropdown();
+});
