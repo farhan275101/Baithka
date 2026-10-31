@@ -354,7 +354,6 @@ function loadCurrentSheetData() {
     setVal("waste-bana-input", sh.banaWaste || 0);
     setVal("waste-zari-input", sh.zariWaste || 0);
 
-    // Load Tani (3 boxes) & Chukka (3 boxes)
     setVal("sheet-tani-item", sh.taniItem || "");
     setVal("sheet-tani-sancha", sh.taniSancha || "");
     setVal("sheet-tani-wazan", sh.taniWazan || "");
@@ -381,7 +380,6 @@ function saveCurrentSheetConfig() {
     sh.banaWaste = parseFloat(document.getElementById("waste-bana-input")?.value) || 0;
     sh.zariWaste = parseFloat(document.getElementById("waste-zari-input")?.value) || 0;
 
-    // Save Tani & Chukka details
     sh.taniItem = (document.getElementById("sheet-tani-item")?.value || "").trim();
     sh.taniSancha = (document.getElementById("sheet-tani-sancha")?.value || "").trim();
     sh.taniWazan = parseFloat(document.getElementById("sheet-tani-wazan")?.value) || 0;
@@ -393,12 +391,15 @@ function saveCurrentSheetConfig() {
     renderSheetRows(sh);
 }
 
-// 5. SAVE / UPDATE LINE ROW
+// 5. SAVE / UPDATE LINE ROW (WITH HISTORY RECORDING FOR PASSBOOK)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
     var sh = sheets[activeSheetIndex];
     if (!sh) return;
+
+    var kariger = sanitizeKarigerList().find(function(x) { return String(x.id) === String(activeKarigerId); });
+    var kName = kariger ? kariger.name : "Kariger";
 
     var d = (document.getElementById("row-date") && document.getElementById("row-date").value) || getTodayDate();
     var bCone = parseFloat(document.getElementById("row-cone") && document.getElementById("row-cone").value) || 0;
@@ -457,6 +458,8 @@ function saveTaniRow() {
         sStock.push({ id: "saree_" + Date.now(), refId: rowId, date: d, pcs: saree });
         setStore("saree_stock", sStock);
     }
+
+    // Bana Stock & Passbook History Recording
     if (banaItemName && (nBana > 0 || retB > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
         var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === banaItemName.toLowerCase(); });
@@ -466,7 +469,24 @@ function saveTaniRow() {
             bFound.bacha = Number(((Number(bFound.aaya) || 0) - (Number(bFound.gaya) || 0)).toFixed(2));
             setStore("bana_stock", bStock);
         }
+
+        // PUSH TO BANA HISTORY WITH KARIGER NAME
+        var bHist = safeArray(getStore("bana_history"));
+        bHist.push({
+            id: "bhist_" + Date.now(),
+            refId: rowId,
+            date: d,
+            name: banaItemName,
+            kariger: kName,
+            type: (nBana > 0 ? "Kariger Issue" : "") + (retB > 0 ? " (Ret: " + retB + " Kg)" : ""),
+            aaya: retB > 0 ? retB : 0,
+            gaya: nBana > 0 ? nBana : 0,
+            karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
+        });
+        setStore("bana_history", bHist);
     }
+
+    // Zari Stock & Passbook History Recording
     if (zariItemName && (nZari > 0 || retZ > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === zariItemName.toLowerCase(); });
@@ -476,6 +496,21 @@ function saveTaniRow() {
             zFound.bacha = Number(((Number(zFound.aaya) || 0) - (Number(zFound.gaya) || 0)).toFixed(2));
             setStore("zari_stock", zStock);
         }
+
+        // PUSH TO ZARI HISTORY WITH KARIGER NAME
+        var zHist = safeArray(getStore("zari_history"));
+        zHist.push({
+            id: "zhist_" + Date.now(),
+            refId: rowId,
+            date: d,
+            name: zariItemName,
+            kariger: kName,
+            type: (nZari > 0 ? "Kariger Issue" : "") + (retZ > 0 ? " (Ret: " + retZ + " Kg)" : ""),
+            aaya: retZ > 0 ? retZ : 0,
+            gaya: nZari > 0 ? nZari : 0,
+            karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
+        });
+        setStore("zari_history", zHist);
     }
 
     // Reset Form
@@ -537,7 +572,10 @@ function deleteTaniRow(idx) {
             bFound.bacha = Number(((Number(bFound.aaya) || 0) - (Number(bFound.gaya) || 0)).toFixed(2));
             setStore("bana_stock", bStock);
         }
+        var bHist = safeArray(getStore("bana_history")).filter(function(h) { return !h || String(h.refId) !== String(r.id); });
+        setStore("bana_history", bHist);
     }
+
     if (r.zariItem && (r.netZari > 0 || r.retZari > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.zariItem.toLowerCase(); });
@@ -547,6 +585,8 @@ function deleteTaniRow(idx) {
             zFound.bacha = Number(((Number(zFound.aaya) || 0) - (Number(zFound.gaya) || 0)).toFixed(2));
             setStore("zari_stock", zStock);
         }
+        var zHist = safeArray(getStore("zari_history")).filter(function(h) { return !h || String(h.refId) !== String(r.id); });
+        setStore("zari_history", zHist);
     }
 
     sh.rows.splice(idx, 1);
@@ -556,7 +596,7 @@ function deleteTaniRow(idx) {
     alert("🗑️ Line delete ho gayi!");
 }
 
-// 8. RENDER TABLE ROWS (TANI NAME, TANI NO, WAZAN HATAYA GAYA)
+// 8. RENDER TABLE ROWS (9 COLUMNS)
 function renderSheetRows(sh) {
     var tbody = document.getElementById("sheet-table-body");
     if (!tbody) return;
