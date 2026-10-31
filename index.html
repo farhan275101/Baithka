@@ -396,12 +396,19 @@
                 <div class="table-responsive"><table><thead><tr style="background:#ea580c; color:white;"><th>Tarikh</th><th>Naam</th><th>Aayi</th><th>Gayi</th><th>Bacha</th><th>Action</th></tr></thead><tbody id="zari-table-body"></tbody></table></div>
             </div>
 
-            <!-- MODULE 4: SAREE STOCK -->
+            <!-- MODULE 4: SAREE STOCK (NOW WITH 4 COMPLETE TABS) -->
             <div id="saree-section" class="module-section" style="display:none;">
                 <div class="module-header"><button class="back-btn" onclick="backToDashboard()">← Dashboard</button><h2 style="color:#2563eb;">🥻 Saree Stock</h2><button class="add-btn" onclick="toggleSareeForm()">+ Saree Inward</button></div>
-                <div class="sheet-tabs-bar" style="margin-bottom:12px;"><div style="display:flex; gap:8px;"><button class="sheet-tab active" id="tab-saree-fresh" onclick="switchSareeStockTab('fresh')">🟢 Fresh</button><button class="sheet-tab" id="tab-saree-finished" onclick="switchSareeStockTab('finished')">🟣 Finished</button><button class="sheet-tab" id="tab-saree-lott" onclick="switchSareeStockTab('lott')">🔴 Lott</button></div></div>
+                <div class="sheet-tabs-bar" style="margin-bottom:12px;">
+                    <div style="display:flex; gap:8px;">
+                        <button class="sheet-tab active" id="tab-saree-fresh" onclick="switchSareeStockTab('fresh')">🟢 Fresh</button>
+                        <button class="sheet-tab" id="tab-saree-cutting" onclick="switchSareeStockTab('cutting')">✂️ Cutting</button>
+                        <button class="sheet-tab" id="tab-saree-finished" onclick="switchSareeStockTab('finished')">🟣 Finished</button>
+                        <button class="sheet-tab" id="tab-saree-lott" onclick="switchSareeStockTab('lott')">🔴 Lott</button>
+                    </div>
+                </div>
                 <div id="saree-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:12px;"></div>
-                <div class="filter-panel"><input type="text" id="search-saree-input" class="search-box" placeholder="🔍 Search Saree..." oninput="filterSaree()"></div>
+                <div class="filter-panel"><input type="text" id="search-saree-input" class="search-box" placeholder="🔍 Search Saree, Kariger, Godam..." oninput="filterSaree()"></div>
                 <div id="add-saree-form" class="custom-form" style="display:none;">
                     <div class="form-row-4">
                         <div class="input-group"><label>Tarikh</label><input type="date" id="saree-date"></div>
@@ -541,7 +548,7 @@
                     </div>
                 </div>
 
-                <!-- 2. WORKERS LIST VIEW (CUTTING & CALENDER) -->
+                <!-- 2. WORKERS LIST VIEW -->
                 <div id="jw-workers-view" style="display:none;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center;">
                         <button class="back-btn" onclick="showJobWorkHub()">← Hub Menu</button>
@@ -549,7 +556,6 @@
                         <button class="add-btn" onclick="toggleJobWorkerForm()"><span id="jw-add-worker-btn-text">+ Naya Kariger</span></button>
                     </div>
 
-                    <!-- Summary Stats Bar with Passbook Click -->
                     <div style="display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
                         <div style="flex:1; background:white; padding:8px 12px; border-radius:8px; border:1px solid #fecaca; cursor:pointer;" onclick="viewJobWorkSummaryPassbook('gayi')">
                             <small style="color:#dc2626; font-weight:700;">📤 Saree Gayi:</small> <strong id="jw-stat-total-gayi" style="color:#dc2626;">0 Pcs</strong>
@@ -610,7 +616,6 @@
 
                     <div id="jw-month-tabs-container" class="sheet-tabs-bar" style="margin-bottom:12px;"></div>
 
-                    <!-- Pichli Baki Control -->
                     <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:10px 14px; border-radius:8px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                         <div>
                             <span style="font-weight:800; color:#1e40af;">📌 Active Sheet:</span> <strong id="jw-sheet-active-badge" style="color:#2563eb;">Month 1</strong>
@@ -621,7 +626,6 @@
                         </div>
                     </div>
 
-                    <!-- Summary Cards -->
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:14px;">
                         <div style="background:white; border:1px solid #fecaca; padding:10px; border-radius:8px; text-align:center;">
                             <small style="color:#dc2626; font-weight:700;">Kul Gayi</small>
@@ -641,7 +645,6 @@
                         </div>
                     </div>
 
-                    <!-- Batch Entry Form -->
                     <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:14px; border-radius:10px; margin-bottom:14px;">
                         <div style="font-weight:800; color:#1e293b; margin-bottom:10px;">➕ Rozana Batch Entry (Gayi / Aayi Saree):</div>
 
@@ -660,7 +663,6 @@
                                 </div>
                             </div>
 
-                            <!-- Calender specific stock source -->
                             <div id="jw-calender-stock-source-wrap" style="display:none; gap:16px; margin-top:4px; font-size:12px;">
                                 <label><input type="radio" name="jw-cal-source" id="jw-source-cutting" value="cutting" checked> ✂️ Cutting se</label>
                                 <label><input type="radio" name="jw-cal-source" id="jw-source-fresh" value="fresh"> 🥻 Fresh Godown se</label>
@@ -694,7 +696,6 @@
                         </div>
                     </div>
 
-                    <!-- Batch Table Rows -->
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -860,7 +861,6 @@
     </div>
 
     <!-- 3. MODALS -->
-    <!-- Passbook Modal -->
     <div id="item-modal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <div class="modal-header"><h3 id="modal-item-title">Passbook</h3><button class="close-modal-btn" onclick="setDisplay('item-modal', 'none')">✕</button></div>
@@ -969,7 +969,6 @@
         </div>
     </div>
 
-    <!-- Datalist for Jobwork Karigers -->
     <datalist id="dl-karigers-list"></datalist>
 
     <!-- 4. MODULAR SCRIPTS -->
@@ -1004,7 +1003,7 @@
     <script src="backup/backup.js"></script>
     <script src="admin/admin.js"></script>
 
-    <!-- JOB WORK UNIFIED ENGINE -->
+    <!-- JOB WORK ENGINE -->
     <script src="jobwork.js"></script>
 </body>
 </html>
