@@ -1,5 +1,5 @@
 /* ========================================================
-   SIMPLICITY ERP - JOB WORK, BATCH & BILLING ENGINE
+   SIMPLICITY ERP - JOB WORK HUB, BATCH & BILLING ENGINE
    File: jobwork.js • Developed by Farhan Jawed
 ======================================================== */
 
@@ -58,7 +58,7 @@ function openJobWorkSubSection(mode) {
         setDisplay("jw-billing-view", "none");
         setDisplay("jw-movement-view", "none");
         setDisplay("jw-dukan-view", "block");
-        renderDukanTransferTable();
+        if (typeof renderDukanTransferTable === "function") renderDukanTransferTable();
     } else if (mode === "billing") {
         setDisplay("jw-workers-view", "none");
         setDisplay("jw-sheet-view", "none");
@@ -76,32 +76,6 @@ function openJobWorkSubSection(mode) {
     }
 }
 
-function getCuttingSareeLiveStats() {
-    var totCuttingAayi = 0;
-    var totSentToCalender = 0;
-    var allWorkers = getJobWorkers();
-
-    allWorkers.filter(function(w) { return w && w.type === "cutting"; }).forEach(function(w) {
-        getJobWorkerSheets(w.id).forEach(function(sh) {
-            safeArray(sh.rows).forEach(function(r) { totCuttingAayi += (Number(r.aayiQty) || 0); });
-        });
-    });
-
-    allWorkers.filter(function(w) { return w && w.type === "calender"; }).forEach(function(w) {
-        getJobWorkerSheets(w.id).forEach(function(sh) {
-            safeArray(sh.rows).forEach(function(r) {
-                if (r && r.stockSource === "cutting") totSentToCalender += (Number(r.gayiQty) || 0);
-            });
-        });
-    });
-
-    return {
-        totAayi: totCuttingAayi,
-        sentToCal: totSentToCalender,
-        bacha: Math.max(0, totCuttingAayi - totSentToCalender)
-    };
-}
-
 function updateJobWorkHubBadges() {
     var workers = getJobWorkers();
     var cutCount = workers.filter(function(w) { return w && w.type === "cutting"; }).length;
@@ -116,18 +90,22 @@ function updateJobWorkHubBadges() {
     if (elCal) elCal.textContent = calCount + " Kariger";
 
     var totSent = 0;
-    getDukanTransfers().forEach(function(d) { totSent += (Number(d.pcs) || 0); });
+    if (typeof getDukanTransfers === "function") {
+        getDukanTransfers().forEach(function(d) { totSent += (Number(d.pcs) || 0); });
+    }
     if (elDuk) elDuk.textContent = totSent + " Pcs Bheje";
 
     if (elBill) elBill.textContent = "Baki: ₹ " + getJwBillingStats().pending.toFixed(0);
 
-    var cutStats = getCuttingSareeLiveStats();
-    var elCutAayi = document.getElementById("jw-stat-cut-aayi");
-    var elCutSent = document.getElementById("jw-stat-cut-sent-cal");
-    var elCutBacha = document.getElementById("jw-stat-cut-bacha");
-    if (elCutAayi) elCutAayi.textContent = cutStats.totAayi + " Pcs";
-    if (elCutSent) elCutSent.textContent = cutStats.sentToCal + " Pcs";
-    if (elCutBacha) elCutBacha.textContent = cutStats.bacha + " Pcs";
+    if (typeof getCuttingSareeLiveStats === "function") {
+        var cutStats = getCuttingSareeLiveStats();
+        var elCutAayi = document.getElementById("jw-stat-cut-aayi");
+        var elCutSent = document.getElementById("jw-stat-cut-sent-cal");
+        var elCutBacha = document.getElementById("jw-stat-cut-bacha");
+        if (elCutAayi) elCutAayi.textContent = cutStats.totAayi + " Pcs";
+        if (elCutSent) elCutSent.textContent = cutStats.sentToCal + " Pcs";
+        if (elCutBacha) elCutBacha.textContent = cutStats.bacha + " Pcs";
+    }
 }
 
 function getJobWorkers() { return safeArray(getStore("jobwork_workers")); }
@@ -153,17 +131,20 @@ function toggleJobWorkerForm() {
     var f = document.getElementById("add-jw-worker-form");
     if (!f) return;
     f.style.display = (f.style.display === "block") ? "none" : "block";
-    document.getElementById("jw-worker-date").value = getTodayDate();
+    var dEl = document.getElementById("jw-worker-date");
+    if (dEl) dEl.value = getTodayDate();
     cancelJobWorkerEdit();
 }
 
 function cancelJobWorkerEdit() {
-    document.getElementById("jw-worker-edit-id").value = "";
-    document.getElementById("jw-worker-name").value = "";
-    document.getElementById("jw-worker-address").value = "";
-    document.getElementById("jw-worker-mobile").value = "";
-    document.getElementById("jw-worker-date").value = getTodayDate();
-    document.getElementById("jw-worker-save-btn").textContent = "Save Kariger";
+    var setV = function(id, v) { var el = document.getElementById(id); if (el) el.value = v; };
+    setV("jw-worker-edit-id", "");
+    setV("jw-worker-name", "");
+    setV("jw-worker-address", "");
+    setV("jw-worker-mobile", "");
+    setV("jw-worker-date", getTodayDate());
+    var btn = document.getElementById("jw-worker-save-btn");
+    if (btn) btn.textContent = "Save Kariger";
     setDisplay("jw-worker-cancel-btn", "none");
 }
 
@@ -580,13 +561,13 @@ function saveJobWorkBatchLine() {
                 refId: batchRowId,
                 date: dDate,
                 sareeName: sDesign,
-                karigerName: wKarName, // Bunne Wala Karigar
+                karigerName: wKarName,
                 kariger: wKarName,
                 karkhanaId: kGodown,
                 type: (stockSource === "cutting") ? "cutting" : "fresh",
                 typeLabel: workerName + " (" + (isCalender ? "Calender" : "Cutting Worker") + ") ko bheja",
                 aai: 0,
-                gai: Number(item.qty || 0), // 👈 OUTWARD COLUMN (- Qty)
+                gai: Number(item.qty || 0),
                 isOut: true,
                 note: workerName + " ko bheja"
             });
@@ -609,12 +590,12 @@ function saveJobWorkBatchLine() {
                 refId: batchRowId,
                 date: aDate,
                 sareeName: sDesign,
-                karigerName: wKarName, // Bunne Wala Karigar
+                karigerName: wKarName,
                 kariger: wKarName,
                 karkhanaId: kGodown,
-                type: isCalender ? "finished" : "cutting", // 👈 Cutting se aayi toh 'cutting', Calender se aayi toh 'finished'!
+                type: isCalender ? "finished" : "cutting",
                 typeLabel: workerName + " (" + (isCalender ? "Calender" : "Cutting") + ") se tayyar aayi",
-                aai: Number(item.qty || 0), // 👈 INWARD COLUMN (+ Qty)
+                aai: Number(item.qty || 0),
                 gai: 0,
                 isOut: false,
                 note: workerName + " se tayyar aayi"
@@ -1051,115 +1032,6 @@ function deleteJwBill(billId) {
     alert("🗑️ Bill delete ho gaya!");
 }
 
-function getDukanTransfers() { return safeArray(getStore("dukan_transfer_history")); }
-function saveDukanTransfers(list) { setStore("dukan_transfer_history", safeArray(list)); }
-
-function addDukanTransferEntry() {
-    var d = document.getElementById("jw-dukan-date").value || getTodayDate();
-    var pcs = parseInt(document.getElementById("jw-dukan-pcs").value, 10) || 0;
-    var note = (document.getElementById("jw-dukan-note").value || "").trim();
-    if (pcs <= 0) return alert("Pcs bharein!");
-
-    var list = getDukanTransfers();
-    var entryId = "duk_" + Date.now();
-    list.push({ id: entryId, date: d, pcs: pcs, note: note || "Apni Dukan Transfer" });
-    saveDukanTransfers(list);
-
-    // Saree History me Dukan Outward Record
-    var sH = safeArray(getStore("saree_history"));
-    sH.push({
-        id: "sh_dukan_" + Date.now(),
-        refId: entryId,
-        date: d,
-        sareeName: "Finished Saree",
-        karigerName: "Dukan Receiver",
-        kariger: "Apni Dukan",
-        karkhanaId: "k_main",
-        type: "finished",
-        typeLabel: "🏪 Dukan Bheja (" + (note || "Final Out") + ")",
-        aai: 0,
-        gai: pcs,
-        isOut: true,
-        note: note || "Dukan Bheja"
-    });
-    setStore("saree_history", sH);
-
-    document.getElementById("jw-dukan-pcs").value = "";
-    document.getElementById("jw-dukan-note").value = "";
-    renderDukanTransferTable();
-    updateJobWorkHubBadges();
-    if (typeof renderSareeTable === "function") renderSareeTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("✅ " + pcs + " Pcs Dukan bheje gaye aur stock se minus ho gaye!");
-}
-
-function deleteDukanTransferEntry(idx) {
-    if (!confirm("Kya delete karna chahte hain? Saree wapas stock me jud jayegi.")) return;
-    var list = getDukanTransfers();
-    var item = list[idx];
-    if (!item) return;
-
-    var refId = item.id;
-    list.splice(idx, 1);
-    saveDukanTransfers(list);
-
-    setStore("saree_history", safeArray(getStore("saree_history")).filter(function(h) { return !h || String(h.refId) !== String(refId); }));
-
-    renderDukanTransferTable();
-    updateJobWorkHubBadges();
-    if (typeof renderSareeTable === "function") renderSareeTable();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("🗑️ Entry delete ho gayi!");
-}
-
-function filterDukanTransfers() { renderDukanTransferTable(); }
-function resetDukanFilter() {
-    if (document.getElementById("jw-dukan-from-date")) document.getElementById("jw-dukan-from-date").value = "";
-    if (document.getElementById("jw-dukan-to-date")) document.getElementById("jw-dukan-to-date").value = "";
-    renderDukanTransferTable();
-}
-
-function renderDukanTransferTable() {
-    var tbody = document.getElementById("jw-dukan-table-body");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-    var list = getDukanTransfers();
-    var fDate = document.getElementById("jw-dukan-from-date") ? document.getElementById("jw-dukan-from-date").value : "";
-    var tDate = document.getElementById("jw-dukan-to-date") ? document.getElementById("jw-dukan-to-date").value : "";
-
-    var filteredList = list.filter(function(d) { return d && isDateInRange(d.date, fDate, tDate); });
-    var totCalenderFinished = 0;
-    getJobWorkers().filter(function(w) { return w && w.type === "calender"; }).forEach(function(w) {
-        getJobWorkerSheets(w.id).forEach(function(sh) {
-            safeArray(sh.rows).forEach(function(r) { totCalenderFinished += (Number(r.aayiQty) || 0); });
-        });
-    });
-
-    var totDukanSent = 0;
-    list.forEach(function(d) { totDukanSent += (Number(d.pcs) || 0); });
-    var bachaInKarkhana = Math.max(0, totCalenderFinished - totDukanSent);
-
-    var elCal = document.getElementById("jw-stat-calender-finished");
-    var elSent = document.getElementById("jw-stat-dukan-sent");
-    var elRem = document.getElementById("jw-stat-karkhana-bacha");
-    if (elCal) elCal.textContent = totCalenderFinished + " Pcs";
-    if (elSent) elSent.textContent = totDukanSent + " Pcs";
-    if (elRem) elRem.textContent = bachaInKarkhana + " Pcs";
-
-    if (!filteredList.length) {
-        tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:15px; color:#888;'>Koi saree Dukan par nahi bheji gayi.</td></tr>";
-        return;
-    }
-
-    filteredList.forEach(function(d, idx) {
-        tbody.innerHTML += "<tr>" +
-            "<td>" + formatDateDisplay(d.date) + "</td><td><strong style='color:#059669;'>+" + d.pcs + " Pcs</strong></td>" +
-            "<td>" + (d.note || "Apni Dukan Transfer") + "</td>" +
-            "<td style='text-align:center;'><button class='delete-btn' onclick='deleteDukanTransferEntry(" + idx + ")'>🗑️</button></td>" +
-        "</tr>";
-    });
-}
-
 function shareJobWorkOnWhatsApp() {
     if (!activeJobWorkerId || !activeJobSheetId) return alert("Pehle koi Khata Sheet kholein!");
     var w = getJobWorkers().find(function(x) { return String(x.id) === String(activeJobWorkerId); });
@@ -1276,5 +1148,3 @@ function renderJwMovementDaybook() {
         tfoot.innerHTML = "<tr style='background:#f3e8ff; font-weight:800; border-top:2px solid #7c3aed;'><td colspan='3'>TOTAL BHUGTAN:</td><td style='color:#dc2626; text-align:center;'>- ₹ " + payOut.toFixed(2) + "</td></tr>";
     }
 }
-
-console.log("✅ jobwork.js Updated & Loaded Successfully!");
