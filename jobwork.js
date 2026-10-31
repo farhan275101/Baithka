@@ -1,6 +1,6 @@
 /* ========================================================
    SIMPLICITY ERP - JOB WORK, BATCH & BILLING ENGINE
-   File 4 of 5 • Developed by Farhan Jawed
+   File: jobwork.js • Developed by Farhan Jawed
 ======================================================== */
 
 var currentJobWorkMode = "hub";
@@ -100,14 +100,6 @@ function getCuttingSareeLiveStats() {
         sentToCal: totSentToCalender,
         bacha: Math.max(0, totCuttingAayi - totSentToCalender)
     };
-}
-
-function getMainGodownFreshSareeStockQty() {
-    var tot = 0;
-    safeArray(getStore("saree_stock")).filter(function(s) { return !s.karkhanaId || s.karkhanaId === "k_main"; }).forEach(function(s) {
-        tot += (Number(s.pcs) || 0);
-    });
-    return tot;
 }
 
 function updateJobWorkHubBadges() {
@@ -433,7 +425,6 @@ function switchJobWorkerSheetTab(id) {
     loadCurrentJobWorkSheet();
 }
 
-
 function addNewJobWorkerMonthlySheet() {
     var sheets = getJobWorkerSheets(activeJobWorkerId);
     var cur = sheets.find(function(s) { return s && String(s.id) === String(activeJobSheetId); }) || sheets[sheets.length - 1];
@@ -549,6 +540,7 @@ function renderAayiBatchChips() {
     if (totText) totText.textContent = currentAayiBatch.length ? ("👉 Wapas Aayi Batch Total: " + tot + " Pcs") : "";
 }
 
+// ================= BATCH SAVE & ACCURATE IN/OUT TRACKING =================
 function saveJobWorkBatchLine() {
     if (!activeJobWorkerId) return;
     var sheets = getJobWorkerSheets(activeJobWorkerId);
@@ -567,80 +559,109 @@ function saveJobWorkBatchLine() {
     if (totGayi === 0 && totAayi === 0 && damagePcs === 0) return alert("Jane ya Aane wali saree ke karigar [+] jodein!");
 
     var stockSource = (isCalender && document.getElementById("jw-source-cutting") && document.getElementById("jw-source-cutting").checked) ? "cutting" : "fresh";
+    var batchRowId = "jwb_" + Date.now();
+    var dDate = (document.getElementById("jw-form-diya-date") && document.getElementById("jw-form-diya-date").value) || getTodayDate();
+    var aDate = (document.getElementById("jw-form-aayi-date") && document.getElementById("jw-form-aayi-date").value) || getTodayDate();
 
+    var allKars = safeArray(getStore("kariger_list"));
+
+    // 1. SAREE GAYI (OUTWARD ENTRY)
     if (totGayi > 0) {
-        if (stockSource === "cutting") {
-            var cStock = safeArray(getStore("finished_saree_stock"));
-            var cutItem = cStock.find(function(x) { return x && x.name && x.name.toLowerCase().indexOf("cutting") !== -1; });
-            if (cutItem) {
-                cutItem.pcs = Math.max(0, (Number(cutItem.pcs) || 0) - totGayi);
-                setStore("finished_saree_stock", cStock);
-            }
-        } else {
-            var sStock = safeArray(getStore("saree_stock"));
-            var rem = totGayi;
-            for (var i = 0; i < sStock.length; i++) {
-                if (rem <= 0) break;
-                if (!sStock[i].karkhanaId || sStock[i].karkhanaId === "k_main") {
-                    var cur = Number(sStock[i].pcs) || 0;
-                    if (cur > 0) {
-                        var take = Math.min(cur, rem);
-                        sStock[i].pcs -= take; rem -= take;
-                    }
-                }
-            }
-            setStore("saree_stock", sStock);
-        }
-
         var sH = safeArray(getStore("saree_history"));
-        sH.push({
-            id: "sh_diya_" + Date.now(), refId: "jwb_" + Date.now(),
-            date: document.getElementById("jw-form-diya-date").value || getTodayDate(),
-            name: (isCalender ? "Calender" : "Cutting") + " Maal Diya",
-            kariger: workerName, type: "Out (" + (isCalender ? "Calender" : "Cutting") + ")", pcs: totGayi,
-            note: workerName + " ko bheja"
+
+        currentDiyaBatch.forEach(function(item) {
+            var wKarName = (item.karigar || "General").trim().toUpperCase();
+            var foundKar = allKars.find(function(k) { return k && k.name && k.name.trim().toUpperCase() === wKarName; });
+            var sDesign = (foundKar && foundKar.saree) ? foundKar.saree : (foundKar ? foundKar.name : "Saree");
+            var kGodown = (foundKar && foundKar.karkhanaId) ? foundKar.karkhanaId : "k_main";
+
+            sH.push({
+                id: "sh_diya_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                refId: batchRowId,
+                date: dDate,
+                sareeName: sDesign,
+                karigerName: wKarName, // Bunne Wala Karigar
+                kariger: wKarName,
+                karkhanaId: kGodown,
+                type: (stockSource === "cutting") ? "cutting" : "fresh",
+                typeLabel: workerName + " (" + (isCalender ? "Calender" : "Cutting Worker") + ") ko bheja",
+                aai: 0,
+                gai: Number(item.qty || 0), // 👈 OUTWARD COLUMN (- Qty)
+                isOut: true,
+                note: workerName + " ko bheja"
+            });
         });
         setStore("saree_history", sH);
     }
 
+    // 2. SAREE AAYI (INWARD ENTRY)
     if (totAayi > 0) {
-        var finishedName = isCalender ? "Calender Finished Saree" : "Cutting Finished Saree";
-        var fStock = safeArray(getStore("finished_saree_stock"));
-        var fItem = fStock.find(function(x) { return x && x.name && x.name.toLowerCase() === finishedName.toLowerCase(); });
-        var aDate = document.getElementById("jw-form-aayi-date").value || getTodayDate();
-
-        if (fItem) {
-            fItem.pcs = (Number(fItem.pcs) || 0) + totAayi; fItem.date = aDate;
-        } else {
-            fStock.push({ id: "fin_" + Date.now(), date: aDate, name: finishedName, processType: isCalender ? "calender" : "cutting", source: workerName, pcs: totAayi });
-        }
-        setStore("finished_saree_stock", fStock);
-
         var sH2 = safeArray(getStore("saree_history"));
-        sH2.push({
-            id: "sh_aayi_" + Date.now(), date: aDate, name: finishedName, kariger: workerName,
-            type: "In (Finished)", pcs: totAayi, note: workerName + " se tayyar aayi"
+
+        currentAayiBatch.forEach(function(item) {
+            var wKarName = (item.karigar || "General").trim().toUpperCase();
+            var foundKar = allKars.find(function(k) { return k && k.name && k.name.trim().toUpperCase() === wKarName; });
+            var sDesign = (foundKar && foundKar.saree) ? foundKar.saree : (foundKar ? foundKar.name : "Saree");
+            var kGodown = (foundKar && foundKar.karkhanaId) ? foundKar.karkhanaId : "k_main";
+
+            sH2.push({
+                id: "sh_aayi_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+                refId: batchRowId,
+                date: aDate,
+                sareeName: sDesign,
+                karigerName: wKarName, // Bunne Wala Karigar
+                kariger: wKarName,
+                karkhanaId: kGodown,
+                type: isCalender ? "finished" : "cutting", // 👈 Cutting se aayi toh 'cutting', Calender se aayi toh 'finished'!
+                typeLabel: workerName + " (" + (isCalender ? "Calender" : "Cutting") + ") se tayyar aayi",
+                aai: Number(item.qty || 0), // 👈 INWARD COLUMN (+ Qty)
+                gai: 0,
+                isOut: false,
+                note: workerName + " se tayyar aayi"
+            });
         });
         setStore("saree_history", sH2);
     }
 
+    // 3. DAMAGE SAREE (LOTT)
     if (damagePcs > 0) {
-        var lottStock = safeArray(getStore("lott_saree_stock"));
-        lottStock.push({ id: "lott_" + Date.now(), date: getTodayDate(), name: "Damage Saree", source: workerName, pcs: damagePcs });
-        setStore("lott_saree_stock", lottStock);
+        var sH3 = safeArray(getStore("saree_history"));
+        sH3.push({
+            id: "sh_dmg_" + Date.now(),
+            refId: batchRowId,
+            date: getTodayDate(),
+            sareeName: "Damage Saree",
+            karigerName: workerName,
+            kariger: workerName,
+            karkhanaId: "k_main",
+            type: "lott",
+            typeLabel: workerName + " se Damage Aayi (Fine: ₹" + damageAmt + ")",
+            aai: damagePcs,
+            gai: 0,
+            isOut: false,
+            note: "Damage Saree"
+        });
+        setStore("saree_history", sH3);
     }
 
     sh.rows = safeArray(sh.rows);
     sh.rows.push({
-        id: "jwb_" + Date.now(),
-        date: (totGayi > 0) ? (document.getElementById("jw-form-diya-date").value || getTodayDate()) : (document.getElementById("jw-form-aayi-date").value || getTodayDate()),
-        gayiQty: totGayi, gayiItems: [].concat(currentDiyaBatch), stockSource: stockSource,
-        aayiQty: totAayi, aayiItems: [].concat(currentAayiBatch), damagePcs: damagePcs, damageAmt: damageAmt
+        id: batchRowId,
+        date: (totGayi > 0) ? dDate : aDate,
+        gayiQty: totGayi,
+        gayiItems: [].concat(currentDiyaBatch),
+        stockSource: stockSource,
+        aayiQty: totAayi,
+        aayiItems: [].concat(currentAayiBatch),
+        damagePcs: damagePcs,
+        damageAmt: damageAmt
     });
 
     saveJobWorkerSheets(activeJobWorkerId, sheets);
-    currentDiyaBatch = []; currentAayiBatch = [];
-    renderDiyaBatchChips(); renderAayiBatchChips();
+    currentDiyaBatch = [];
+    currentAayiBatch = [];
+    renderDiyaBatchChips();
+    renderAayiBatchChips();
     document.getElementById("jw-form-damage-pcs").value = "";
     document.getElementById("jw-form-damage-amt").value = "";
     renderJobWorkSheetTable(sh);
@@ -686,28 +707,16 @@ function renderJobWorkSheetTable(sh) {
 }
 
 function deleteJobWorkBatchRow(idx) {
-    if (!confirm("Kya is poori Batch Line ko delete karna chahte hain? Stock theek ho jayega.")) return;
+    if (!confirm("Kya is poori Batch Line ko delete karna chahte hain? Saree stock theek ho jayega.")) return;
     var sheets = getJobWorkerSheets(activeJobWorkerId);
     var sh = sheets.find(function(s) { return s && String(s.id) === String(activeJobSheetId); });
     if (!sh) return;
     var r = safeArray(sh.rows)[idx];
     if (!r) return;
 
-    if (Number(r.gayiQty) > 0) {
-        if (r.stockSource === "cutting") {
-            var cStock = safeArray(getStore("finished_saree_stock"));
-            var cutItem = cStock.find(function(x) { return x && x.name && x.name.toLowerCase().indexOf("cutting") !== -1; });
-            if (cutItem) { cutItem.pcs = (Number(cutItem.pcs) || 0) + Number(r.gayiQty); setStore("finished_saree_stock", cStock); }
-        } else {
-            var sStock = safeArray(getStore("saree_stock"));
-            var mainItems = sStock.filter(function(s) { return !s.karkhanaId || s.karkhanaId === "k_main"; });
-            if (mainItems.length > 0) { mainItems[0].pcs = (Number(mainItems[0].pcs) || 0) + Number(r.gayiQty); setStore("saree_stock", sStock); }
-        }
-    }
-
-    if (Number(r.aayiQty) > 0) {
-        var fStock = safeArray(getStore("finished_saree_stock"));
-        if (fStock.length > 0) { fStock[0].pcs = Math.max(0, (Number(fStock[0].pcs) || 0) - Number(r.aayiQty)); setStore("finished_saree_stock", fStock); }
+    if (r.id) {
+        var sH = safeArray(getStore("saree_history")).filter(function(h) { return !h || String(h.refId) !== String(r.id); });
+        setStore("saree_history", sH);
     }
 
     sh.rows.splice(idx, 1);
@@ -1051,31 +1060,28 @@ function addDukanTransferEntry() {
     var note = (document.getElementById("jw-dukan-note").value || "").trim();
     if (pcs <= 0) return alert("Pcs bharein!");
 
-    var finStock = safeArray(getStore("finished_saree_stock"));
-    var totFinAvail = 0;
-    finStock.forEach(function(f) { totFinAvail += (Number(f.pcs) || 0); });
-    if (pcs > totFinAvail) {
-        if (!confirm("Karkhane me sirf " + totFinAvail + " Saree bachi hai! Continue karein?")) return;
-    }
-
     var list = getDukanTransfers();
     var entryId = "duk_" + Date.now();
     list.push({ id: entryId, date: d, pcs: pcs, note: note || "Apni Dukan Transfer" });
     saveDukanTransfers(list);
 
-    var rem = pcs;
-    for (var i = 0; i < finStock.length; i++) {
-        if (rem <= 0) break;
-        var cur = Number(finStock[i].pcs) || 0;
-        if (cur > 0) {
-            var take = Math.min(cur, rem);
-            finStock[i].pcs -= take; rem -= take;
-        }
-    }
-    setStore("finished_saree_stock", finStock);
-
+    // Saree History me Dukan Outward Record
     var sH = safeArray(getStore("saree_history"));
-    sH.push({ id: "sh_dukan_" + Date.now(), refId: entryId, date: d, name: "Calender Finished Saree", kariger: "Apni Dukan", type: "Out (Dukan Bheja)", pcs: pcs, note: note });
+    sH.push({
+        id: "sh_dukan_" + Date.now(),
+        refId: entryId,
+        date: d,
+        sareeName: "Finished Saree",
+        karigerName: "Dukan Receiver",
+        kariger: "Apni Dukan",
+        karkhanaId: "k_main",
+        type: "finished",
+        typeLabel: "🏪 Dukan Bheja (" + (note || "Final Out") + ")",
+        aai: 0,
+        gai: pcs,
+        isOut: true,
+        note: note || "Dukan Bheja"
+    });
     setStore("saree_history", sH);
 
     document.getElementById("jw-dukan-pcs").value = "";
@@ -1093,21 +1099,12 @@ function deleteDukanTransferEntry(idx) {
     var item = list[idx];
     if (!item) return;
 
-    var pcs = Number(item.pcs) || 0;
     var refId = item.id;
     list.splice(idx, 1);
     saveDukanTransfers(list);
 
-    if (pcs > 0) {
-        var finStock = safeArray(getStore("finished_saree_stock"));
-        if (finStock.length > 0) {
-            finStock[0].pcs = (Number(finStock[0].pcs) || 0) + pcs;
-        } else {
-            finStock.push({ id: "fin_cal", date: getTodayDate(), name: "Calender Finished Saree", processType: "calender", source: "Dukan Return", pcs: pcs });
-        }
-        setStore("finished_saree_stock", finStock);
-        setStore("saree_history", safeArray(getStore("saree_history")).filter(function(h) { return !h || String(h.refId) !== String(refId); }));
-    }
+    setStore("saree_history", safeArray(getStore("saree_history")).filter(function(h) { return !h || String(h.refId) !== String(refId); }));
+
     renderDukanTransferTable();
     updateJobWorkHubBadges();
     if (typeof renderSareeTable === "function") renderSareeTable();
@@ -1136,12 +1133,6 @@ function renderDukanTransferTable() {
         getJobWorkerSheets(w.id).forEach(function(sh) {
             safeArray(sh.rows).forEach(function(r) { totCalenderFinished += (Number(r.aayiQty) || 0); });
         });
-    });
-
-    safeArray(getStore("finished_saree_stock")).forEach(function(f) {
-        if (f && f.isOpening && (String(f.processType || "") === "calender" || String(f.name || "").toLowerCase().indexOf("calender") !== -1)) {
-            totCalenderFinished += (Number(f.pcs) || 0);
-        }
     });
 
     var totDukanSent = 0;
@@ -1286,4 +1277,4 @@ function renderJwMovementDaybook() {
     }
 }
 
-console.log("✅ jobwork.js Loaded Successfully!");
+console.log("✅ jobwork.js Updated & Loaded Successfully!");
