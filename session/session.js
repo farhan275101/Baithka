@@ -66,13 +66,23 @@ function switchAppFinancialSession(targetSession) {
     var cleanTarget = String(targetSession).replace(/['"]+/g, '').trim();
     var uId = (typeof currentUserId !== "undefined" && currentUserId) ? currentUserId : "app";
 
+    // 1. LocalStorage & Memory
     localStorage.setItem(uId + "_app_active_session", cleanTarget);
     if (typeof APP_MEMORY_CACHE !== "undefined") {
         APP_MEMORY_CACHE[uId + "_app_active_session"] = cleanTarget;
     }
+    if (typeof idbPut === "function") idbPut(uId + "_app_active_session", cleanTarget);
 
-    // 🔒 DATA MIXING PREVENTION: Clear Memory Cache Completely
+    // 2. 🚨 FIREBASE UPDATE (Prevents Jumping Back)
+    if (typeof db !== "undefined" && db && uId) {
+        try { db.ref("users/" + uId + "/app_active_session").set(cleanTarget); } catch(e) {}
+    }
+
+    // 3. Clear Cache & Preload IndexedDB
     if (typeof clearMemoryCache === "function") clearMemoryCache();
+    if (typeof APP_MEMORY_CACHE !== "undefined") {
+        APP_MEMORY_CACHE[uId + "_app_active_session"] = cleanTarget;
+    }
 
     if (typeof initIndexedDBPreload === "function") {
         initIndexedDBPreload(function() {
@@ -97,7 +107,6 @@ function openSessionClosingModal() {
     var cur = getActiveFinancialSession();
     if (curDisplay) curDisplay.value = cur;
 
-    // Next financial year suggestion (e.g. 2026-2027 -> 2027-2028)
     var newInp = document.getElementById("session-new-input");
     if (newInp) {
         var parts = cur.split("-");
@@ -108,7 +117,6 @@ function openSessionClosingModal() {
         }
     }
 
-    // Populate Delete Session Dropdown
     var delSel = document.getElementById("session-delete-select");
     if (delSel) {
         delSel.innerHTML = "<option value=''>-- Chunein --</option>";
@@ -136,7 +144,6 @@ function confirmAndDeleteSessionWithAuth() {
     if (!targetSess) return alert("Pehle delete karne ke liye session chunein!");
     if (!uInp || !pInp) return alert("User ID aur Password daalna zaroori hai!");
 
-    // Exact Auth Verification from auth.js (getUsersList & user.pass)
     var users = (typeof getUsersList === "function") ? getUsersList() : [];
     var foundUser = users.find(function(u) {
         var matchId = (u.id && String(u.id).toLowerCase() === uInp);
@@ -162,7 +169,10 @@ function confirmAndDeleteSessionWithAuth() {
     localStorage.setItem(uId + "_app_sessions_list", JSON.stringify(sessions));
     if (typeof idbPut === "function") idbPut(uId + "_app_sessions_list", sessions);
 
-    // Remove keys for this session from localStorage
+    if (typeof db !== "undefined" && db && uId) {
+        try { db.ref("users/" + uId + "/app_sessions_list").set(sessions); } catch(e) {}
+    }
+
     var prefix = uId + "_" + targetSess + "_";
     var keysToRemove = [];
     for (var i = 0; i < localStorage.length; i++) {
@@ -171,11 +181,13 @@ function confirmAndDeleteSessionWithAuth() {
     }
     keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
 
-    // Fallback if deleting currently active session
     var cur = getActiveFinancialSession();
     if (cur === targetSess) {
         var nextActive = sessions[sessions.length - 1];
         localStorage.setItem(uId + "_app_active_session", nextActive);
+        if (typeof db !== "undefined" && db && uId) {
+            try { db.ref("users/" + uId + "/app_active_session").set(nextActive); } catch(e) {}
+        }
     }
 
     if (typeof clearMemoryCache === "function") clearMemoryCache();
