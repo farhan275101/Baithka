@@ -243,34 +243,76 @@ function loadCurrentSheetData() {
     }
 
     // Rate inputs
-    document.getElementById("rate-bana-input").value = sh.rateBana !== undefined ? sh.rateBana : 0.311;
-    document.getElementById("rate-zari-input").value = sh.rateZari !== undefined ? sh.rateZari : 0.110;
-    document.getElementById("rate-bani-input").value = sh.rateBani !== undefined ? sh.rateBani : 240;
-    document.getElementById("pichla-bana-input").value = sh.pichlaBana || 0;
-    document.getElementById("pichla-zari-input").value = sh.pichlaZari || 0;
-    document.getElementById("pichla-bani-input").value = sh.pichlaBani || 0;
-    document.getElementById("waste-bana-input").value = sh.banaWaste || 0;
-    document.getElementById("waste-zari-input").value = sh.zariWaste || 0;
+    if (document.getElementById("rate-bana-input")) document.getElementById("rate-bana-input").value = sh.rateBana !== undefined ? sh.rateBana : 0.311;
+    if (document.getElementById("rate-zari-input")) document.getElementById("rate-zari-input").value = sh.rateZari !== undefined ? sh.rateZari : 0.110;
+    if (document.getElementById("rate-bani-input")) document.getElementById("rate-bani-input").value = sh.rateBani !== undefined ? sh.rateBani : 240;
+    if (document.getElementById("pichla-bana-input")) document.getElementById("pichla-bana-input").value = sh.pichlaBana || 0;
+    if (document.getElementById("pichla-zari-input")) document.getElementById("pichla-zari-input").value = sh.pichlaZari || 0;
+    if (document.getElementById("pichla-bani-input")) document.getElementById("pichla-bani-input").value = sh.pichlaBani || 0;
+    if (document.getElementById("waste-bana-input")) document.getElementById("waste-bana-input").value = sh.banaWaste || 0;
+    if (document.getElementById("waste-zari-input")) document.getElementById("waste-zari-input").value = sh.zariWaste || 0;
 
-    // Render Table Rows
+    // Render Table Rows (Auto matches columns)
     var tbody = document.getElementById("sheet-table-body");
     if (tbody) {
         tbody.innerHTML = "";
+        var ths = document.querySelectorAll("#sheet-table thead th, #sheet-table-head th");
+
         safeArray(sh.rows).forEach(function(r) {
-            tbody.innerHTML += "<tr>" +
-                "<td>" + formatDateDisplay(r.date) + "</td>" +
-                "<td>" + (r.saree || 0) + "</td>" +
-                "<td>" + (r.cone || 0) + "</td>" +
-                "<td>" + (r.lessTp || 0) + "</td>" +
-                "<td><strong>" + (r.netBana || 0) + "</strong></td>" +
-                "<td>" + (r.zariQty || 0) + "</td>" +
-                "<td>" + (r.topi || 0) + "</td>" +
-                "<td><strong>" + (r.netZari || 0) + "</strong></td>" +
-                "<td style='color:#059669; font-weight:700;'>₹ " + (r.paid || 0) + "</td>" +
-                "<td>" + (r.retBana || 0) + "</td>" +
-                "<td>" + (r.retZari || 0) + "</td>" +
-                "<td style='text-align:center;'><button class='delete-btn' onclick='deleteTaniRow(\"" + r.id + "\")'>🗑️</button></td>" +
-            "</tr>";
+            if (ths && ths.length > 0) {
+                var rowHtml = "<tr>";
+                ths.forEach(function(th) {
+                    var txt = (th.textContent || "").toLowerCase().trim();
+                    if (txt.indexOf("date") !== -1 || txt.indexOf("tarikh") !== -1) {
+                        rowHtml += "<td>" + formatDateDisplay(r.date) + "</td>";
+                    } else if (txt.indexOf("sancha") !== -1) {
+                        rowHtml += "<td>" + (r.sancha || "-") + "</td>";
+                    } else if (txt.indexOf("tani") !== -1 && txt.indexOf("wazan") === -1) {
+                        rowHtml += "<td>" + (r.taniName || "-") + "</td>";
+                    } else if (txt.indexOf("wazan") !== -1) {
+                        rowHtml += "<td>" + (r.taniWazan || 0) + "</td>";
+                    } else if (txt.indexOf("net bana") !== -1) {
+                        rowHtml += "<td><strong>" + (r.netBana || 0) + "</strong></td>";
+                    } else if (txt.indexOf("cone") !== -1) {
+                        rowHtml += "<td>" + (r.cone || 0) + "</td>";
+                    } else if (txt.indexOf("less") !== -1 || txt.indexOf("tp") !== -1) {
+                        rowHtml += "<td>" + (r.lessTp || 0) + "</td>";
+                    } else if (txt.indexOf("net zari") !== -1) {
+                        rowHtml += "<td><strong>" + (r.netZari || 0) + "</strong></td>";
+                    } else if (txt.indexOf("topi") !== -1) {
+                        rowHtml += "<td>" + (r.topi || 0) + "</td>";
+                    } else if (txt.indexOf("zari") !== -1) {
+                        rowHtml += "<td>" + (r.zariQty || 0) + "</td>";
+                    } else if (txt.indexOf("saree") !== -1) {
+                        rowHtml += "<td>" + (r.saree || 0) + "</td>";
+                    } else if (txt.indexOf("paid") !== -1 || txt.indexOf("diya") !== -1) {
+                        rowHtml += "<td style='color:#059669; font-weight:700;'>₹ " + (r.paid || 0) + "</td>";
+                    } else if (txt.indexOf("lott") !== -1) {
+                        rowHtml += "<td>" + (r.lott || 0) + "</td>";
+                    } else if (txt.indexOf("ret") !== -1 && txt.indexOf("bana") !== -1) {
+                        rowHtml += "<td>" + (r.retBana || 0) + "</td>";
+                    } else if (txt.indexOf("ret") !== -1 && txt.indexOf("zari") !== -1) {
+                        rowHtml += "<td>" + (r.retZari || 0) + "</td>";
+                    } else if (txt.indexOf("action") !== -1 || txt.indexOf("del") !== -1 || txt === "" || txt === "opt") {
+                        rowHtml += "<td style='text-align:center;'><button class='delete-btn' onclick='deleteTaniRow(\"" + r.id + "\")'>🗑️</button></td>";
+                    } else {
+                        rowHtml += "<td>-</td>";
+                    }
+                });
+                rowHtml += "</tr>";
+                tbody.innerHTML += rowHtml;
+            } else {
+                tbody.innerHTML += "<tr>" +
+                    "<td>" + (r.sancha || "-") + "</td>" +
+                    "<td>" + (r.taniName || "-") + "</td>" +
+                    "<td>" + (r.taniWazan || 0) + "</td>" +
+                    "<td><strong>" + (r.netBana || 0) + "</strong></td>" +
+                    "<td><strong>" + (r.netZari || 0) + "</strong></td>" +
+                    "<td style='color:#059669; font-weight:700;'>₹ " + (r.paid || 0) + "</td>" +
+                    "<td>" + (r.lott || 0) + "</td>" +
+                    "<td style='text-align:center;'><button class='delete-btn' onclick='deleteTaniRow(\"" + r.id + "\")'>🗑️</button></td>" +
+                "</tr>";
+            }
         });
     }
 
@@ -327,29 +369,95 @@ function deleteSheetTab(idx, e) {
     loadCurrentSheetData();
 }
 
-function saveTaniRow() {
-    if (!activeKarigerId) return;
-    var d = document.getElementById("row-date").value || getTodayDate();
-    var s = parseFloat(document.getElementById("row-saree").value) || 0;
-    var cone = parseFloat(document.getElementById("row-cone").value) || 0;
-    var lessTp = parseFloat(document.getElementById("row-lesstp").value) || 0;
-    var zQty = parseFloat(document.getElementById("row-zariqty").value) || 0;
-    var topi = parseFloat(document.getElementById("row-topi").value) || 0;
-    var paid = parseFloat(document.getElementById("row-paid").value) || 0;
-    var retB = parseFloat(document.getElementById("row-retbana").value) || 0;
-    var retZ = parseFloat(document.getElementById("row-retzari").value) || 0;
+// 5. HELPER: GODOWN STOCK AUTO-ADJUST (BANA, ZARI & SANCHA)
+function adjustGodownStock(row, isReverse) {
+    var mult = isReverse ? -1 : 1;
 
+    function deductFromStore(storeKeys, identifier, delta) {
+        if (!identifier || delta === 0) return;
+        storeKeys.forEach(function(sKey) {
+            var items = safeArray(getStore(sKey));
+            var changed = false;
+            items.forEach(function(it) {
+                if (!it) return;
+                var match = (String(it.id || "").toLowerCase() === String(identifier).toLowerCase()) ||
+                            (String(it.name || it.title || "").toLowerCase() === String(identifier).toLowerCase());
+                if (match) {
+                    changed = true;
+                    if (it.stock !== undefined) it.stock = Number(((Number(it.stock) || 0) + delta).toFixed(2));
+                    if (it.stockKg !== undefined) it.stockKg = Number(((Number(it.stockKg) || 0) + delta).toFixed(2));
+                    if (it.weight !== undefined) it.weight = Number(((Number(it.weight) || 0) + delta).toFixed(2));
+                    if (it.currentStock !== undefined) it.currentStock = Number(((Number(it.currentStock) || 0) + delta).toFixed(2));
+                }
+            });
+            if (changed) setStore(sKey, items);
+        });
+    }
+
+    // 1. BANA: Diya hua Net Bana Godown se Minus (-), Ret Bana Plus (+)
+    var banaChange = (- (row.netBana || 0) + (row.retBana || 0)) * mult;
+    var banaTarget = row.banaItem || (document.getElementById("sheet-bana-item") && document.getElementById("sheet-bana-item").value);
+    deductFromStore(["bana_list", "bana_stock", "raw_bana_list"], banaTarget, banaChange);
+
+    // 2. ZARI: Diya hua Net Zari Godown se Minus (-), Ret Zari Plus (+)
+    var zariChange = (- (row.netZari || 0) + (row.retZari || 0)) * mult;
+    var zariTarget = row.zariItem || (document.getElementById("sheet-zari-item") && document.getElementById("sheet-zari-item").value);
+    deductFromStore(["zari_list", "zari_stock", "raw_zari_list"], zariTarget, zariChange);
+
+    // 3. SANCHA: Tani Wazan (Kg) seedhe Sancha se Minus (-)
+    var sanchaChange = (- (row.taniWazan || 0)) * mult;
+    var sanchaTarget = row.sancha || (document.getElementById("sheet-sancha-item") && document.getElementById("sheet-sancha-item").value);
+    deductFromStore(["sancha_list", "sancha_stock", "sancha_master"], sanchaTarget, sanchaChange);
+}
+
+// 6. SAVE LINE ROW (FORM SUBMIT)
+function saveTaniRow() {
+    if (!activeKarigerId) return alert("Pehle Kariger chunein!");
+
+    function getVal(ids, def) {
+        for (var i = 0; i < ids.length; i++) {
+            var el = document.getElementById(ids[i]);
+            if (el && el.value !== undefined && el.value !== "") return el.value;
+        }
+        return def;
+    }
+
+    var d = getVal(["row-date", "entry-date"], getTodayDate());
+    var s = parseFloat(getVal(["row-saree", "entry-saree"], 0)) || 0;
+    var sancha = String(getVal(["row-sancha", "entry-sancha", "sheet-sancha-item", "sancha-item"], "")).trim();
+    var taniName = String(getVal(["row-taniname", "row-tani-name", "entry-tani-name"], "Tani-1")).trim();
+    var taniWazan = parseFloat(getVal(["row-taniwazan", "row-tani-wazan", "entry-tani-wazan"], 0)) || 0;
+
+    var cone = parseFloat(getVal(["row-cone", "entry-bana-cone"], 0)) || 0;
+    var lessTp = parseFloat(getVal(["row-lesstp", "row-less-tp", "entry-less-tp"], 0)) || 0;
+
+    var zQty = parseFloat(getVal(["row-zariqty", "row-zari-qty", "entry-zari-qty"], 0)) || 0;
+    var topi = parseFloat(getVal(["row-topi", "entry-topi"], 0)) || 0;
+
+    var paid = parseFloat(getVal(["row-paid", "entry-paid"], 0)) || 0;
+    var lott = parseFloat(getVal(["row-lott", "entry-lott"], 0)) || 0;
+    var retB = parseFloat(getVal(["row-retbana", "row-ret-bana", "entry-ret-bana"], 0)) || 0;
+    var retZ = parseFloat(getVal(["row-retzari", "row-ret-zari", "entry-ret-zari"], 0)) || 0;
+
+    var banaItem = String(getVal(["sheet-bana-item", "bana-item", "row-bana-item"], "")).trim();
+    var zariItem = String(getVal(["sheet-zari-item", "zari-item", "row-zari-item"], "")).trim();
+
+    // 1. Net Calculation: Total - Less
     var nBana = Math.max(0, cone - lessTp);
     var nZari = Math.max(0, zQty - topi);
 
     var sheets = getKarigerSheets(activeKarigerId);
     var sh = sheets[activeSheetIndex];
+    if (!sh) return;
     sh.rows = safeArray(sh.rows);
 
-    sh.rows.push({
+    var newRow = {
         id: "row_" + Date.now(),
         date: d,
         saree: s,
+        sancha: sancha,
+        taniName: taniName,
+        taniWazan: Number(taniWazan.toFixed(2)),
         cone: cone,
         lessTp: lessTp,
         netBana: Number(nBana.toFixed(2)),
@@ -357,34 +465,56 @@ function saveTaniRow() {
         topi: topi,
         netZari: Number(nZari.toFixed(2)),
         paid: paid,
+        lott: lott,
         retBana: retB,
-        retZari: retZ
-    });
+        retZari: retZ,
+        banaItem: banaItem,
+        zariItem: zariItem
+    };
 
+    sh.rows.push(newRow);
+
+    // 2. Adjust Godown Stock
+    adjustGodownStock(newRow, false);
+
+    // Save & Refresh
     saveKarigerSheets(activeKarigerId, sheets);
     loadCurrentSheetData();
 
     // Reset Form
-    document.getElementById("row-saree").value = "";
-    document.getElementById("row-cone").value = "";
-    document.getElementById("row-lesstp").value = "";
-    document.getElementById("row-zariqty").value = "";
-    document.getElementById("row-topi").value = "";
-    document.getElementById("row-paid").value = "";
-    document.getElementById("row-retbana").value = "";
-    document.getElementById("row-retzari").value = "";
+    var idsToClear = [
+        "row-saree", "entry-saree", "row-cone", "entry-bana-cone",
+        "row-lesstp", "row-less-tp", "entry-less-tp", "row-zariqty",
+        "row-zari-qty", "entry-zari-qty", "row-topi", "entry-topi",
+        "row-paid", "entry-paid", "row-lott", "entry-lott",
+        "row-retbana", "row-ret-bana", "entry-ret-bana",
+        "row-retzari", "row-ret-zari", "entry-ret-zari",
+        "row-taniwazan", "row-tani-wazan", "entry-tani-wazan"
+    ];
+    idsToClear.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    alert("✅ Line jud gayi aur Karkhana Stock update ho gaya!");
 }
 
 function deleteTaniRow(rowId) {
     if (!confirm("Kya aap is row ko delete karna chahte hain?")) return;
     var sheets = getKarigerSheets(activeKarigerId);
     var sh = sheets[activeSheetIndex];
+    var rowToDelete = safeArray(sh.rows).find(function(r) { return String(r.id) === String(rowId); });
+
+    if (rowToDelete) {
+        adjustGodownStock(rowToDelete, true); // Reverse stock
+    }
+
     sh.rows = safeArray(sh.rows).filter(function(r) { return String(r.id) !== String(rowId); });
     saveKarigerSheets(activeKarigerId, sheets);
     loadCurrentSheetData();
 }
 
-// 5. 1-CLICK WHATSAPP DIGITAL PARCHI
+// 7. 1-CLICK WHATSAPP DIGITAL PARCHI
 function sendKarigerWhatsAppParchi() {
     if (!activeKarigerId) return;
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(activeKarigerId); });
