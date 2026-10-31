@@ -48,7 +48,6 @@ function calculateSheetTotals(sh) {
     var wBana = Number(sh.banaWaste) || 0;
     var wZari = Number(sh.zariWaste) || 0;
 
-    // Expected Khapat + Wastage
     var expBana = (sPcs * rBana) + wBana;
     var expZari = (sPcs * rZari) + wZari;
 
