@@ -1,5 +1,5 @@
 /* ========================================================
-   SIMPLICITY ERP - BANA STOCK & PASSBOOK ENGINE
+   SIMPLICITY ERP - BANA STOCK & PASSBOOK ENGINE (FIXED)
    File: bana/bana-ui.js • Developed by Farhan Jawed
 ======================================================== */
 
@@ -48,7 +48,8 @@ function toggleBanaForm() {
 }
 
 function toggleBanaItemType() {
-    var isNew = document.getElementById("bana-type-new")?.checked;
+    var typeNewRadio = document.getElementById("bana-type-new");
+    var isNew = typeNewRadio ? typeNewRadio.checked : false;
     var exGroup = document.getElementById("bana-existing-group");
     var newGroup = document.getElementById("bana-new-group");
     if (exGroup) exGroup.style.display = isNew ? "none" : "block";
@@ -73,13 +74,15 @@ function populateBanaExistingDropdown() {
 }
 
 function saveNewBana() {
-    var isNew = document.getElementById("bana-type-new")?.checked;
-    var name = isNew 
-        ? (document.getElementById("bana-new-name")?.value || "").trim() 
-        : (document.getElementById("bana-select-existing")?.value || "").trim();
+    var typeNewRadio = document.getElementById("bana-type-new");
+    var isNew = typeNewRadio ? typeNewRadio.checked : false;
+
+    var nameInp = isNew ? document.getElementById("bana-new-name") : document.getElementById("bana-select-existing");
+    var name = (nameInp && nameInp.value || "").trim();
 
     var date = (document.getElementById("bana-date") && document.getElementById("bana-date").value) || getTodayDate();
-    var qty = parseFloat(document.getElementById("bana-aaya")?.value) || 0;
+    var qtyInp = document.getElementById("bana-aaya");
+    var qty = (qtyInp && parseFloat(qtyInp.value)) || 0;
 
     if (!name) return alert("Bana Item ka naam zaroori hai!");
     if (qty <= 0) return alert("Wazan (Qty) daalein!");
@@ -124,6 +127,7 @@ function saveNewBana() {
     toggleBanaForm();
     populateBanaExistingDropdown();
     renderBanaTable();
+    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
     alert("✅ Bana Stock me jama ho gaya!");
 }
 
@@ -156,14 +160,21 @@ function renderBanaTable() {
     } else {
         list.forEach(function(b) {
             if (!b) return;
-            var bacha = Number(b.bacha || 0);
+            var kid = b.karkhanaId || "k_main";
+
+            // 🔒 SYNC WITH BANA-CALC: Always read live accurate calculation
+            var stats = (typeof getBanaItemStats === "function") 
+                ? getBanaItemStats(b.name, kid) 
+                : { aaya: Number(b.aaya || 0), gaya: Number(b.gaya || 0), bacha: Number(b.bacha || 0) };
+
+            var bacha = Number(stats.bacha || 0);
             totalBacha += bacha;
 
             tbody.innerHTML += "<tr>" +
                 "<td>" + (b.date || "-") + "</td>" +
                 "<td><strong>" + b.name + "</strong></td>" +
-                "<td style='color:#059669; font-weight:700;'>" + Number(b.aaya || 0).toFixed(2) + "</td>" +
-                "<td style='color:#ea580c; font-weight:700;'>" + Number(b.gaya || 0).toFixed(2) + "</td>" +
+                "<td style='color:#059669; font-weight:700;'>" + Number(stats.aaya || 0).toFixed(2) + "</td>" +
+                "<td style='color:#ea580c; font-weight:700;'>" + Number(stats.gaya || 0).toFixed(2) + "</td>" +
                 "<td style='font-weight:800; color:#1e3a8a;'>" + bacha.toFixed(2) + " Kg</td>" +
                 "<td style='text-align:center;'><button class='sheet-btn' onclick='openBanaPassbook(\"" + b.name + "\")'>📖 Passbook</button></td>" +
             "</tr>";
@@ -233,9 +244,13 @@ function renderBanaPassbookRows() {
         return x && x.name && x.name.toLowerCase() === currentPassbookBanaItem.toLowerCase();
     });
 
-    var fDate = document.getElementById("pass-from-date")?.value;
-    var tDate = document.getElementById("pass-to-date")?.value;
-    var sTxt = (document.getElementById("pass-search-input")?.value || "").toLowerCase().trim();
+    var fDateInp = document.getElementById("pass-from-date");
+    var tDateInp = document.getElementById("pass-to-date");
+    var sTxtInp = document.getElementById("pass-search-input");
+
+    var fDate = fDateInp ? fDateInp.value : "";
+    var tDate = tDateInp ? tDateInp.value : "";
+    var sTxt = (sTxtInp && sTxtInp.value || "").toLowerCase().trim();
 
     if (fDate) hist = hist.filter(function(x) { return x.date >= fDate; });
     if (tDate) hist = hist.filter(function(x) { return x.date <= tDate; });
@@ -256,12 +271,15 @@ function renderBanaPassbookRows() {
         var aayaQty = Number(r.aaya || r.qty || r.wazan || r.weight || 0);
         var gayaQty = Number(r.gaya || 0);
 
-        // Kariger Entry check: refId ya kariger name se detect hoga
         var isKarigerEntry = r.refId || (r.type && r.type.toLowerCase().indexOf("kariger") !== -1);
-        var karigerDisplay = (r.kariger && r.kariger !== "-" && r.kariger !== "undefined") ? ("👤 " + r.kariger) : "📦 Factory Inward";
+        var isOpeningEntry = r.isOpening || (r.type && r.type.toLowerCase().indexOf("opening") !== -1);
 
-        var actBtn = isKarigerEntry 
-            ? "<span style='color:#64748b; font-size:11px; font-weight:700;'>🔒 Kariger Khata</span>"
+        var karigerDisplay = isOpeningEntry 
+            ? "📦 31st March Closing (Opening)" 
+            : ((r.kariger && r.kariger !== "-" && r.kariger !== "undefined") ? ("👤 " + r.kariger) : "📦 Factory Inward");
+
+        var actBtn = (isKarigerEntry || isOpeningEntry) 
+            ? "<span style='color:#64748b; font-size:11px; font-weight:700;'>🔒 Locked</span>"
             : ("<button class='delete-btn' onclick='deleteBanaPurchase(\"" + r.id + "\", " + aayaQty + ")'>🗑️ Delete</button>");
 
         tbody.innerHTML += "<tr>" +
@@ -270,7 +288,7 @@ function renderBanaPassbookRows() {
             "<td style='color:#1e3a8a; font-weight:700;'>" + karigerDisplay + "</td>" +
             "<td style='color:#059669; font-weight:700;'>" + (aayaQty > 0 ? aayaQty.toFixed(2) : "-") + "</td>" +
             "<td style='color:#ea580c; font-weight:700;'>" + (gayaQty > 0 ? gayaQty.toFixed(2) : "-") + "</td>" +
-            "<td style='text-align:center;'>" + actBtn + "</td>" +
+            "<td style='text-align:center;'><button class='sheet-btn' style='padding:3px 8px; font-size:11px;' onclick='alert(\"Entry ID: \" + \"" + r.id + "\")'>👁️</button> " + actBtn + "</td>" +
         "</tr>";
     });
 }
@@ -291,5 +309,6 @@ function deleteBanaPurchase(histId, qty) {
 
     renderBanaPassbookRows();
     renderBanaTable();
+    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
     alert("🗑️ Khareed entry delete ho gayi aur Stock adjust ho gaya!");
 }
