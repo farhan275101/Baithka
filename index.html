@@ -204,7 +204,7 @@
                     <div><label>Zari Waste</label><input type="number" step="0.01" id="waste-zari-input" onchange="saveCurrentSheetConfig()"></div>
                 </div>
 
-                <!-- 2. ITEM SELECTION: BANA, ZARI, TANI, CHUKKA (ALL ONCHANGE PERSISTED) -->
+                <!-- 2. ITEM SELECTION: BANA, ZARI, TANI, CHUKKA -->
                 <div style="background:#f1f5f9; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:14px;">
                     <div style="font-weight:800; color:#1e293b; margin-bottom:10px;">📦 Item Selection:</div>
                     
@@ -221,11 +221,10 @@
                         </div>
                     </div>
 
-                    <!-- Tani Selection (3 Boxes) -->
                     <div class="form-row-3" style="margin-bottom:10px; background:#eff6ff; padding:8px; border-radius:8px;">
                         <div class="input-group">
                             <label style="color:#0284c7; font-weight:700;">3. Tani Select Item:</label>
-                            <input type="text" id="sheet-tani-item" list="sheet-sancha-dl" placeholder="Tani Item..." oninput="updateLiveStockDisplay()" onchange="saveCurrentSheetConfig()">
+                            <input type="text" id="sheet-tani-item" list="sheet-sancha-tani-dl" placeholder="Tani Item..." oninput="updateLiveStockDisplay()" onchange="saveCurrentSheetConfig()">
                             <small id="live-tani-stock-badge" style="color:#0284c7; font-weight:700;">Bacha: 0.00 Kg</small>
                         </div>
                         <div class="input-group">
@@ -238,11 +237,10 @@
                         </div>
                     </div>
 
-                    <!-- Chukka Selection (3 Boxes) -->
                     <div class="form-row-3" style="background:#faf5ff; padding:8px; border-radius:8px;">
                         <div class="input-group">
                             <label style="color:#7c3aed; font-weight:700;">4. Chukka Select Item:</label>
-                            <input type="text" id="sheet-chukka-item" list="sheet-sancha-dl" placeholder="Chukka Item..." oninput="updateLiveStockDisplay()" onchange="saveCurrentSheetConfig()">
+                            <input type="text" id="sheet-chukka-item" list="sheet-sancha-chukka-dl" placeholder="Chukka Item..." oninput="updateLiveStockDisplay()" onchange="saveCurrentSheetConfig()">
                             <small id="live-chukka-stock-badge" style="color:#7c3aed; font-weight:700;">Bacha: 0.00 Kg</small>
                         </div>
                         <div class="input-group">
@@ -257,7 +255,8 @@
 
                     <datalist id="sheet-bana-dl"></datalist>
                     <datalist id="sheet-zari-dl"></datalist>
-                    <datalist id="sheet-sancha-dl"></datalist>
+                    <datalist id="sheet-sancha-tani-dl"></datalist>
+                    <datalist id="sheet-sancha-chukka-dl"></datalist>
                 </div>
 
                 <!-- 3. NICHE WALE ENTRY BOXES -->
@@ -423,23 +422,63 @@
                 <div id="payment-pagination-bar"></div>
             </div>
 
-            <!-- MODULE 6: SANCHA -->
+            <!-- MODULE 6: SANCHA (TANI & CHUKKA TABS + KG STOCK) -->
             <div id="sancha-section" class="module-section" style="display:none;">
-                <div class="module-header"><button class="back-btn" onclick="backToDashboard()">← Dashboard</button><h2 style="color:#0284c7;">⚙️ Sancha (Loom Tani)</h2><button class="add-btn" style="background:#0284c7;" onclick="toggleAddSanchaItemForm()">+ Tani Bani</button></div>
+                <div class="module-header">
+                    <button class="back-btn" onclick="backToDashboard()">← Dashboard</button>
+                    <h2 style="color:#0284c7;">⚙️ Sancha Stock (Tani & Chukka)</h2>
+                    <button class="add-btn" style="background:#0284c7;" onclick="toggleAddSanchaForm()">+ Naya Sancha</button>
+                </div>
+
+                <div class="sheet-tabs-bar" style="margin-bottom:12px;">
+                    <div style="display:flex; gap:8px;">
+                        <button class="sheet-tab active" id="tab-sancha-tani" onclick="switchSanchaCategory('tani')">🧵 1. Tani Stock</button>
+                        <button class="sheet-tab" id="tab-sancha-chukka" onclick="switchSanchaCategory('chukka')">⚙️ 2. Chukka Stock</button>
+                    </div>
+                </div>
+
                 <div id="sancha-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:12px;"></div>
-                <div id="sancha-opening-box" class="summary-box" style="margin-bottom:14px; text-align:left; background:#f0f9ff;"><h3 id="sancha-opening-val" style="color:#0284c7;">0 Tani Bachi</h3></div>
-                <div class="filter-panel"><input type="text" id="search-sancha-input" class="search-box" placeholder="🔍 Search Tani..." oninput="filterSancha()"></div>
+                <div id="sancha-opening-box" class="summary-box" style="margin-bottom:14px; text-align:left; background:#f0f9ff;">
+                    <h3 id="sancha-opening-val" style="color:#0284c7;">0.00 Kg Bacha</h3>
+                </div>
+                <div class="filter-panel"><input type="text" id="search-sancha-input" class="search-box" placeholder="🔍 Search Sancha (Tani / Chukka)..." oninput="filterSancha()"></div>
+
                 <div id="add-sancha-item-form" class="custom-form" style="display:none;">
-                    <input type="hidden" id="sancha-edit-id">
+                    <div style="display:flex; gap:20px; margin-bottom:12px; flex-wrap:wrap;">
+                        <div>
+                            <strong>Category:</strong>
+                            <label style="margin-left:8px;"><input type="radio" name="sancha-cat" id="sancha-cat-tani" value="tani" checked onchange="toggleSanchaFormOptions()"> 🧵 Tani</label>
+                            <label style="margin-left:8px;"><input type="radio" name="sancha-cat" id="sancha-cat-chukka" value="chukka" onchange="toggleSanchaFormOptions()"> ⚙️ Chukka</label>
+                        </div>
+                        <div>
+                            <strong>Stock Type:</strong>
+                            <label style="margin-left:8px;"><input type="radio" name="sancha-type" id="sancha-type-existing" checked onchange="toggleSanchaFormOptions()"> Purana</label>
+                            <label style="margin-left:8px;"><input type="radio" name="sancha-type" id="sancha-type-new" onchange="toggleSanchaFormOptions()"> + Naya</label>
+                        </div>
+                    </div>
                     <div class="form-row-4">
                         <div class="input-group"><label>Tarikh</label><input type="date" id="sancha-date"></div>
-                        <div class="input-group"><label>Tani Naam</label><input type="text" id="sancha-name"></div>
-                        <div class="input-group"><label>Qty</label><input type="number" id="sancha-qty"></div>
-                        <div class="input-group"><label>Person</label><input type="text" id="sancha-person"></div>
+                        <div class="input-group" id="sancha-existing-group"><label>Item Chunein</label><select id="sancha-select-existing"></select></div>
+                        <div class="input-group" id="sancha-new-group" style="display:none;"><label>Naya Item Naam</label><input type="text" id="sancha-new-name"></div>
+                        <div class="input-group"><label style="color:#0284c7; font-weight:700;">Qty (Kg)</label><input type="number" step="0.01" id="sancha-qty" placeholder="0.00"></div>
+                        <div class="input-group"><label>Person (Kiske Paas)</label><input type="text" id="sancha-person" placeholder="Person name..."></div>
                     </div>
-                    <div style="display:flex; justify-content:flex-end; gap:8px;"><button class="back-btn" onclick="toggleAddSanchaItemForm()">Cancel</button><button class="add-btn" id="sancha-save-btn" onclick="saveSanchaItem()">Save</button></div>
+                    <div style="display:flex; justify-content:flex-end; gap:8px;">
+                        <button class="back-btn" onclick="toggleAddSanchaForm()">Cancel</button>
+                        <button class="add-btn" style="background:#0284c7;" onclick="saveNewSanchaStock()">Save Stock</button>
+                    </div>
                 </div>
-                <div class="table-responsive"><table><thead><tr style="background:#0284c7; color:white;"><th>Tarikh</th><th>Tani Naam</th><th>Bani</th><th>Kiske Paas</th><th>Bachi</th><th>Action</th></tr></thead><tbody id="sancha-table-body"></tbody></table></div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr style="background:#0284c7; color:white;">
+                                <th>Tarikh</th><th>Category</th><th>Naam</th><th>Aaya (Kg)</th><th>Gaya (Kg)</th><th>Bacha (Kg)</th><th>Kiske Paas</th><th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sancha-table-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- MODULE 7: JOB WORK -->
@@ -548,58 +587,4 @@
     <script src="auth/profile.js"></script>
     <script src="session/session.js"></script>
     <script src="session/session-closing.js"></script>
-    <script src="kariger/kariger-calc.js"></script>
-    <script src="kariger/kariger-ui.js"></script>
-    <script src="bana/bana-calc.js"></script>
-    <script src="bana/bana-ui.js"></script>
-    <script src="zari/zari-calc.js"></script>
-    <script src="zari/zari-ui.js"></script>
-    <script src="sancha/sancha-calc.js"></script>
-    <script src="sancha/sancha-ui.js"></script>
-    <script src="saree/saree-calc.js"></script>
-    <script src="saree/saree-ui.js"></script>
-    <script src="cutting/cutting-calc.js"></script>
-    <script src="cutting/cutting-ui.js"></script>
-    <script src="calender/calender-calc.js"></script>
-    <script src="calender/calender-ui.js"></script>
-    <script src="dukan/dukan.js"></script>
-    <script src="payment/payment.js"></script>
-    <script src="daybook/daybook.js"></script>
-    <script src="backup/backup.js"></script>
-    <script src="admin/admin.js"></script>
-
-    <!-- 5. APP CONTROLLER -->
-    <script>
-        window.onload = function() {
-            if (typeof clearMemoryCache === "function") clearMemoryCache();
-            currentUserId = null;
-            currentUserRole = null;
-            activeKarigerId = null;
-
-            if (typeof setDisplay === "function") {
-                setDisplay("login-wrapper", "flex");
-                setDisplay("desktop-screen", "none");
-            }
-            if (typeof showLogin === "function") showLogin();
-
-            var idInp = document.getElementById("login-id");
-            var passInp = document.getElementById("login-pass");
-            if (idInp) idInp.value = "";
-            if (passInp) passInp.value = "";
-
-            if (idInp) {
-                idInp.addEventListener("keypress", function(e) {
-                    if (e.key === "Enter" && typeof handleLogin === "function") handleLogin();
-                });
-            }
-            if (passInp) {
-                passInp.addEventListener("keypress", function(e) {
-                    if (e.key === "Enter" && typeof handleLogin === "function") handleLogin();
-                });
-            }
-
-            if (typeof syncUsersWithFirebase === "function") syncUsersWithFirebase();
-        };
-    </script>
-</body>
-</html>
+    <script src="karig
