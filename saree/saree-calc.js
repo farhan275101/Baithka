@@ -1,5 +1,5 @@
 /* ========================================================
-   SIMPLICITY ERP - SAREE CALCULATION ENGINE
+   SIMPLICITY ERP - SAREE CALCULATION ENGINE (COMPLETE)
    File: saree/saree-calc.js • Developed by Farhan Jawed
 ======================================================== */
 
@@ -57,7 +57,64 @@ function removeSareeByRefId(refId) {
 }
 
 /**
- * 3. All-Column Universal Search Filter
+ * 3. Saree Table Pipeline Grouping (Fresh, Cutting, Finished, Lott)
+ */
+function groupSareeStockByTab(historyList, currentTab, karkhanaFilter) {
+    var targetTab = (currentTab || "fresh").toLowerCase();
+    var kId = karkhanaFilter || "all";
+    var map = {};
+
+    var karkhanas = safeArray(getStore("karkhana_list"));
+    var getGodamName = function(kid) {
+        if (!kid || kid === "k_main") return "Main Godown";
+        var found = karkhanas.find(function(k) { return String(k.id) === String(kid); });
+        return found ? found.name : "Godown";
+    };
+
+    safeArray(historyList).forEach(function(h) {
+        if (!h) return;
+        var hType = (h.type || "fresh").toLowerCase();
+        if (hType !== targetTab) return;
+
+        var hKid = h.karkhanaId || "k_main";
+        if (kId !== "all" && String(hKid) !== String(kId)) return;
+
+        var sName = (h.sareeName || h.name || "General Saree").trim().toUpperCase();
+        var kName = (h.karigerName || h.kariger || "Karkhana").trim().toUpperCase();
+        var key = sName + "___" + kName + "___" + hKid;
+
+        if (!map[key]) {
+            map[key] = {
+                date: h.date || getTodayDate(),
+                sareeName: sName,
+                karigerName: kName,
+                karkhanaId: hKid,
+                godamName: getGodamName(hKid),
+                aai: 0,
+                gai: 0,
+                bachi: 0
+            };
+        }
+
+        var isGai = (h.isOut === true) || (Number(h.gai) > 0);
+        var inQ = isGai ? 0 : Number(h.aai !== undefined ? h.aai : (h.pcs || 0));
+        var outQ = isGai ? Number(h.gai !== undefined ? h.gai : (h.pcs || 0)) : 0;
+
+        map[key].aai += inQ;
+        map[key].gai += outQ;
+        if (h.date) map[key].date = h.date;
+    });
+
+    var rows = [];
+    for (var k in map) {
+        map[k].bachi = Math.max(0, map[k].aai - map[k].gai);
+        rows.push(map[k]);
+    }
+    return rows;
+}
+
+/**
+ * 4. All-Column Universal Search Filter
  */
 function searchSareeData(list, searchText) {
     if (!searchText || !searchText.trim()) return list;
@@ -79,22 +136,13 @@ function searchSareeData(list, searchText) {
 }
 
 /**
- * 4. Passbook Filter (Date Range + Search)
+ * 5. Passbook Filter (Date Range + Search)
  */
 function filterPassbookHistory(historyList, fromDate, toDate, searchTxt) {
     var filtered = safeArray(historyList);
 
-    if (fromDate) {
-        filtered = filtered.filter(function(item) {
-            return item.date >= fromDate;
-        });
-    }
-
-    if (toDate) {
-        filtered = filtered.filter(function(item) {
-            return item.date <= toDate;
-        });
-    }
+    if (fromDate) filtered = filtered.filter(function(item) { return item.date >= fromDate; });
+    if (toDate) filtered = filtered.filter(function(item) { return item.date <= toDate; });
 
     if (searchTxt && searchTxt.trim()) {
         var query = searchTxt.toLowerCase().trim();
