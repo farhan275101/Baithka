@@ -281,7 +281,7 @@
                     </div>
                 </div>
 
-                <!-- TABLE: 11 COLUMNS -->
+                <!-- TABLE WITH FOOTER TOTALS -->
                 <div class="table-responsive">
                     <table>
                         <thead>
@@ -290,14 +290,69 @@
                             </tr>
                         </thead>
                         <tbody id="sheet-table-body"></tbody>
+                        <tfoot style="background:#f1f5f9; font-weight:800; border-top:2px solid #cbd5e1;">
+                            <tr>
+                                <th>Total:</th>
+                                <th id="tot-saree">0</th>
+                                <th>-</th>
+                                <th>-</th>
+                                <th id="tot-tani-wazan">0.00</th>
+                                <th id="tot-bana-net" style="color:#059669;">0.00</th>
+                                <th id="tot-zari-net" style="color:#ea580c;">0.00</th>
+                                <th id="tot-paid" style="color:#2563eb;">₹ 0</th>
+                                <th id="tot-ret-bana">0.00</th>
+                                <th id="tot-ret-zari">0.00</th>
+                                <th>-</th>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
 
-                <!-- CALCULATION SUMMARY -->
-                <div class="sheet-calculations-grid" style="margin-top:14px;">
-                    <div class="calc-card"><h4>BANA</h4><div>Bacha: <strong id="calc-rem-bana" style="color:#059669;">0 Kg</strong></div></div>
-                    <div class="calc-card"><h4>ZARI</h4><div>Bachi: <strong id="calc-rem-zari" style="color:#ea580c;">0 Kg</strong></div></div>
-                    <div class="calc-card"><h4>BAKI RUPYA</h4><div>Baki: <strong id="calc-rem-amt" style="color:#ef4444; font-size:16px;">₹ 0</strong></div></div>
+                <!-- SCREENSHOT 1: THREE SUMMARY CARDS (MAZDOORI, BANA & ZARI HISAB) -->
+                <div style="display:flex; flex-direction:column; gap:14px; margin-top:16px; margin-bottom:24px;">
+                    <!-- 1. Mazdoori Hisab -->
+                    <div style="background:white; border:1px solid #c7d2fe; border-radius:12px; padding:16px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-weight:800; color:#1e3a8a; margin-bottom:12px; font-size:16px;">💰 Mazdoori Hisab:</div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Total Saree:</span><strong id="calc-tot-saree">0</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; color:#dc2626;"><span>Lott:</span><strong id="calc-tot-lott">- 0</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Net Saree:</span><strong id="calc-net-saree">0</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Bani Rate:</span><strong id="calc-bani-rate">₹ 240</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Gross Bani:</span><strong id="calc-gross-bani">₹ 0.00</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; color:#059669;"><span>Last Closing:</span><strong id="calc-last-tani-bani">+ ₹ 0</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:14px; color:#dc2626;"><span>Paid:</span><strong id="calc-tot-paid">- ₹ 0.00</strong></div>
+                        <div style="background:#fef2f2; border-left:4px solid #ef4444; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:800; color:#b91c1c; font-size:14px;">REMAINING:</span>
+                            <strong id="calc-remaining-amt" style="color:#dc2626; font-size:18px;">₹ 0.00</strong>
+                        </div>
+                    </div>
+
+                    <!-- 2. Bana Hisab -->
+                    <div style="background:white; border:1px solid #a7f3d0; border-radius:12px; padding:16px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-weight:800; color:#065f46; margin-bottom:12px; font-size:16px;">🧶 Bana Hisab:</div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Closing Last:</span><strong id="calc-last-tani-bana">0</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Net Diya:</span><strong id="calc-tot-bana">0.00</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; color:#dc2626;"><span>Returning:</span><strong id="calc-ret-bana">- 0.00</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Khapat:</span><strong id="calc-bana-consumption">0.00</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:14px; color:#ea580c;"><span>Wastage:</span><strong id="calc-bana-wastage">- 0.00</strong></div>
+                        <div style="background:#ecfdf5; border-left:4px solid #10b981; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:800; color:#065f46; font-size:14px;">BACHA BANA:</span>
+                            <strong id="calc-remaining-bana" style="color:#059669; font-size:18px;">0.00</strong>
+                        </div>
+                    </div>
+
+                    <!-- 3. Zari Hisab -->
+                    <div style="background:white; border:1px solid #fed7aa; border-radius:12px; padding:16px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+                        <div style="font-weight:800; color:#9a3412; margin-bottom:12px; font-size:16px;">✨ Zari Hisab:</div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Closing Last:</span><strong id="calc-last-tani-zari">0</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Net Diya:</span><strong id="calc-tot-zari">0.00</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; color:#dc2626;"><span>Returning:</span><strong id="calc-ret-zari">- 0.00</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;"><span>Khapat:</span><strong id="calc-zari-consumption">0.00</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:14px; color:#ea580c;"><span>Wastage:</span><strong id="calc-zari-wastage">- 0.00</strong></div>
+                        <div style="background:#fff7ed; border-left:4px solid #f97316; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:800; color:#9a3412; font-size:14px;">BACHI ZARI:</span>
+                            <strong id="calc-remaining-zari" style="color:#ea580c; font-size:18px;">0.00</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
 
