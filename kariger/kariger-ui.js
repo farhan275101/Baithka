@@ -1,6 +1,7 @@
 /* ========================================================
    SIMPLICITY ERP - KARIGER UI & SHEET CONTROLLER
    File: kariger/kariger-ui.js • Developed by Farhan Jawed
+   (Master Directory, Tani Khata Sheet & Absent Tracker)
 ======================================================== */
 
 var activeKarigerId = null;
@@ -23,6 +24,26 @@ function setText(id, v) {
 function sanitizeKarigerList() {
     var list = safeArray(getStore("kariger_list"));
     return list.filter(function(k) { return k && k.name && String(k.name).trim() !== ""; });
+}
+
+// 0. ABSENT DAYS CALCULATION ENGINE
+function getKarigerAbsentDays(kId, joinDate) {
+    var sheets = typeof getKarigerSheets === "function" ? getKarigerSheets(kId) : [];
+    var lastDate = joinDate || getTodayDate();
+
+    sheets.forEach(function(sh) {
+        safeArray(sh.rows).forEach(function(r) {
+            if (r && r.date && r.date > lastDate) {
+                lastDate = r.date;
+            }
+        });
+    });
+
+    var today = new Date(getTodayDate());
+    var last = new Date(lastDate);
+    var diffTime = today - last;
+    var diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
 }
 
 // 1. NAVIGATION
@@ -49,7 +70,7 @@ function backToDashboard() {
     if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
 }
 
-// 2. MASTER TABLE & PAGINATION
+// 2. MASTER TABLE & ABSENT FILTER
 function renderKarigerKarkhanaTabs() {
     var bar = document.getElementById("kariger-karkhana-tabs-bar");
     if (!bar) return;
@@ -99,6 +120,14 @@ function renderKarigerTable() {
         });
     }
 
+    // 15, 20, 30, 40 Din Absent Filter Engine
+    var absentFilterVal = parseInt(document.getElementById("kariger-absent-filter")?.value) || 0;
+    if (absentFilterVal > 0) {
+        list = list.filter(function(k) {
+            return getKarigerAbsentDays(k.id, k.date) >= absentFilterVal;
+        });
+    }
+
     var totalItems = list.length;
     var totalPages = Math.ceil(totalItems / karigerPageSize) || 1;
     if (currentKarigerPage > totalPages) currentKarigerPage = totalPages;
@@ -122,7 +151,7 @@ function renderKarigerTable() {
     }
 
     if (!totalItems) {
-        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px; color:#888;'>Koi Kariger nahi mila.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px; color:#888;'>Koi Kariger nahi mila" + (absentFilterVal > 0 ? (" jo " + absentFilterVal + " din se absent ho.") : ".") + "</td></tr>";
         return;
     }
 
@@ -131,10 +160,19 @@ function renderKarigerTable() {
     pageList.forEach(function(k, idx) {
         var actualIdx = (currentKarigerPage - 1) * karigerPageSize + (idx + 1);
         var kBadge = "<span class='badge-blue' style='font-size:11px;'>🏭 " + (k.karkhanaName || "Main Godown") + "</span>";
+
+        var absentDays = getKarigerAbsentDays(k.id, k.date);
+        var absentBadge = "";
+        if (absentDays >= 30) {
+            absentBadge = " <span style='background:#fef2f2; color:#b91c1c; border:1px solid #f87171; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;'>🔴 " + absentDays + " Din Gayab</span>";
+        } else if (absentDays >= 15) {
+            absentBadge = " <span style='background:#fffbeb; color:#b45309; border:1px solid #fcd34d; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;'>⚠️ " + absentDays + " Din Gayab</span>";
+        }
+
         html += "<tr>" +
             "<td>" + actualIdx + "</td>" +
             "<td>" + kBadge + "</td>" +
-            "<td><strong>" + k.name + "</strong></td>" +
+            "<td><strong>" + k.name + "</strong>" + absentBadge + "</td>" +
             "<td>" + (k.saree || "-") + "</td>" +
             "<td>" + (k.mobile || "-") + "</td>" +
             "<td>" + (k.date || "-") + "</td>" +
@@ -260,7 +298,7 @@ function updateLiveStockDisplay() {
     setText("live-chukka-stock-badge", "Bacha: " + (cItem ? Number(cItem.bacha !== undefined ? cItem.bacha : cItem.aaya || 0).toFixed(2) : "0.00") + " Kg");
 }
 
-// 4. TANI KHATA SHEET CONTROLLER (TANI & CHUKKA STOCK AUTO-MINUS ENGINE)
+// 4. TANI KHATA SHEET CONTROLLER
 function openKarigerSheet(id) {
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(id); });
     if (!k) return alert("Kariger nahi mila!");
@@ -346,7 +384,6 @@ function deleteTaniSheet(idx, e) {
     if (sheets.length <= 1) return alert("Pehli Tani Sheet delete nahi ho sakti!");
     if (!confirm("Kya is Tani Sheet ko delete karna chahte hain?")) return;
     
-    // Revert Sancha Stock if tani was issued on this sheet
     var delSh = sheets[idx];
     if (delSh) {
         if (delSh.taniItem && Number(delSh.taniWazan) > 0) {
@@ -442,10 +479,9 @@ function saveCurrentSheetConfig() {
     sh.chukkaSancha = (document.getElementById("sheet-chukka-sancha")?.value || "").trim();
     sh.chukkaWazan = newChukkaWazan;
 
-    // ================= 1. TANI STOCK AUTO-MINUS =================
+    // Tani Stock Auto-Minus
     if (sh.taniItem && (newTaniWazan !== oldTaniWazan || sh.taniItem !== oldTaniItem)) {
         var sList = safeArray(getStore("sancha_items"));
-        // Old item revert if changed
         if (oldTaniItem && oldTaniItem !== sh.taniItem && oldTaniWazan > 0) {
             revertSanchaStock(oldTaniItem, "tani", oldTaniWazan);
             oldTaniWazan = 0;
@@ -462,7 +498,6 @@ function saveCurrentSheetConfig() {
             setStore("sancha_items", sList);
         }
 
-        // Passbook Entry
         var sHist = safeArray(getStore("sancha_history"));
         var refKey = activeKarigerId + "_" + sh.id + "_tani";
         sHist = sHist.filter(function(h) { return !h || h.refId !== refKey; });
@@ -483,10 +518,9 @@ function saveCurrentSheetConfig() {
         setStore("sancha_history", sHist);
     }
 
-    // ================= 2. CHUKKA STOCK AUTO-MINUS =================
+    // Chukka Stock Auto-Minus
     if (sh.chukkaItem && (newChukkaWazan !== oldChukkaWazan || sh.chukkaItem !== oldChukkaItem)) {
         var sList2 = safeArray(getStore("sancha_items"));
-        // Old item revert if changed
         if (oldChukkaItem && oldChukkaItem !== sh.chukkaItem && oldChukkaWazan > 0) {
             revertSanchaStock(oldChukkaItem, "chukka", oldChukkaWazan);
             oldChukkaWazan = 0;
@@ -503,7 +537,6 @@ function saveCurrentSheetConfig() {
             setStore("sancha_items", sList2);
         }
 
-        // Passbook Entry
         var sHist2 = safeArray(getStore("sancha_history"));
         var refKey2 = activeKarigerId + "_" + sh.id + "_chukka";
         sHist2 = sHist2.filter(function(h) { return !h || h.refId !== refKey2; });
