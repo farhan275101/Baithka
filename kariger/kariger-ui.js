@@ -248,7 +248,7 @@ function updateLiveStockDisplay() {
     setText("live-chukka-stock-badge", "Bacha: " + (cItem ? Number(cItem.aaya || cItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
 }
 
-// 4. TANI KHATA SHEET CONTROLLER
+// 4. TANI KHATA SHEET CONTROLLER (SHEET LEVEL LOCK FOR BANA & ZARI)
 function openKarigerSheet(id) {
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(id); });
     if (!k) return alert("Kariger nahi mila!");
@@ -354,6 +354,9 @@ function loadCurrentSheetData() {
     setVal("waste-bana-input", sh.banaWaste || 0);
     setVal("waste-zari-input", sh.zariWaste || 0);
 
+    // Bana, Zari, Tani, Chukka - Ek baar sheet me load
+    setVal("line-bana-name", sh.banaItem || "");
+    setVal("line-zari-name", sh.zariItem || "");
     setVal("sheet-tani-item", sh.taniItem || "");
     setVal("sheet-tani-sancha", sh.taniSancha || "");
     setVal("sheet-tani-wazan", sh.taniWazan || "");
@@ -380,6 +383,9 @@ function saveCurrentSheetConfig() {
     sh.banaWaste = parseFloat(document.getElementById("waste-bana-input")?.value) || 0;
     sh.zariWaste = parseFloat(document.getElementById("waste-zari-input")?.value) || 0;
 
+    // Upar wale 4 Item Sheet me save (ek baar)
+    sh.banaItem = (document.getElementById("line-bana-name")?.value || "").trim();
+    sh.zariItem = (document.getElementById("line-zari-name")?.value || "").trim();
     sh.taniItem = (document.getElementById("sheet-tani-item")?.value || "").trim();
     sh.taniSancha = (document.getElementById("sheet-tani-sancha")?.value || "").trim();
     sh.taniWazan = parseFloat(document.getElementById("sheet-tani-wazan")?.value) || 0;
@@ -389,9 +395,10 @@ function saveCurrentSheetConfig() {
 
     saveKarigerSheets(activeKarigerId, sheets);
     renderSheetRows(sh);
+    updateLiveStockDisplay();
 }
 
-// 5. SAVE / UPDATE LINE ROW (WITH HISTORY RECORDING FOR PASSBOOK)
+// 5. SAVE / UPDATE LINE ROW (AUTO PASSBOOK LOGGING WITH KARIGER NAME)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
@@ -413,8 +420,9 @@ function saveTaniRow() {
     var retB = parseFloat(document.getElementById("row-retbana") && document.getElementById("row-retbana").value) || 0;
     var retZ = parseFloat(document.getElementById("row-retzari") && document.getElementById("row-retzari").value) || 0;
 
-    var banaItemName = (document.getElementById("line-bana-name") && document.getElementById("line-bana-name").value || "").trim();
-    var zariItemName = (document.getElementById("line-zari-name") && document.getElementById("line-zari-name").value || "").trim();
+    // Upar chune hue items se automatic link
+    var banaItemName = (sh.banaItem || document.getElementById("line-bana-name")?.value || "").trim();
+    var zariItemName = (sh.zariItem || document.getElementById("line-zari-name")?.value || "").trim();
 
     var nBana = Math.max(0, bCone - bLess);
     var nZari = Math.max(0, zQty - topi);
@@ -452,14 +460,14 @@ function saveTaniRow() {
 
     saveKarigerSheets(activeKarigerId, sheets);
 
-    // Stock Adjustments
+    // 1. Saree Stock
     if (saree > 0) {
         var sStock = safeArray(getStore("saree_stock"));
         sStock.push({ id: "saree_" + Date.now(), refId: rowId, date: d, pcs: saree });
         setStore("saree_stock", sStock);
     }
 
-    // Bana Stock & Passbook History Recording
+    // 2. Bana Stock & Passbook History (With Kariger Name)
     if (banaItemName && (nBana > 0 || retB > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
         var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === banaItemName.toLowerCase(); });
@@ -470,7 +478,6 @@ function saveTaniRow() {
             setStore("bana_stock", bStock);
         }
 
-        // PUSH TO BANA HISTORY WITH KARIGER NAME
         var bHist = safeArray(getStore("bana_history"));
         bHist.push({
             id: "bhist_" + Date.now(),
@@ -478,7 +485,7 @@ function saveTaniRow() {
             date: d,
             name: banaItemName,
             kariger: kName,
-            type: (nBana > 0 ? "Kariger Issue" : "") + (retB > 0 ? " (Ret: " + retB + " Kg)" : ""),
+            type: "Kariger Issue",
             aaya: retB > 0 ? retB : 0,
             gaya: nBana > 0 ? nBana : 0,
             karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
@@ -486,7 +493,7 @@ function saveTaniRow() {
         setStore("bana_history", bHist);
     }
 
-    // Zari Stock & Passbook History Recording
+    // 3. Zari Stock & Passbook History (With Kariger Name)
     if (zariItemName && (nZari > 0 || retZ > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === zariItemName.toLowerCase(); });
@@ -497,7 +504,6 @@ function saveTaniRow() {
             setStore("zari_stock", zStock);
         }
 
-        // PUSH TO ZARI HISTORY WITH KARIGER NAME
         var zHist = safeArray(getStore("zari_history"));
         zHist.push({
             id: "zhist_" + Date.now(),
@@ -505,7 +511,7 @@ function saveTaniRow() {
             date: d,
             name: zariItemName,
             kariger: kName,
-            type: (nZari > 0 ? "Kariger Issue" : "") + (retZ > 0 ? " (Ret: " + retZ + " Kg)" : ""),
+            type: "Kariger Issue",
             aaya: retZ > 0 ? retZ : 0,
             gaya: nZari > 0 ? nZari : 0,
             karkhanaId: kariger ? (kariger.karkhanaId || "k_main") : "k_main"
@@ -513,7 +519,7 @@ function saveTaniRow() {
         setStore("zari_history", zHist);
     }
 
-    // Reset Form
+    // Reset Entry Form
     setVal("row-saree", "");
     setVal("row-lott", "");
     setVal("row-cone", "");
@@ -644,10 +650,9 @@ function renderSheetRows(sh) {
     setText("tot-ret-bana", totRB.toFixed(2));
     setText("tot-ret-zari", totRZ.toFixed(2));
 
-    // 2. Summary Cards Calculation (Mazdoori me Lott minus hokar calculation)
+    // 2. Summary Cards
     var c = calculateSheetTotals(sh);
 
-    // Mazdoori Hisab
     setText("calc-tot-saree", c.totSaree);
     setText("calc-tot-lott", "- " + c.totLott);
     setText("calc-net-saree", c.netSaree);
@@ -657,7 +662,6 @@ function renderSheetRows(sh) {
     setText("calc-tot-paid", "- ₹ " + c.totPaid.toFixed(2));
     setText("calc-remaining-amt", "₹ " + c.remainingAmt.toFixed(2));
 
-    // Bana Hisab
     setText("calc-last-tani-bana", (sh.pichlaBana || 0));
     setText("calc-tot-bana", c.totBana.toFixed(2));
     setText("calc-ret-bana", "- " + c.retBana.toFixed(2));
@@ -665,7 +669,6 @@ function renderSheetRows(sh) {
     setText("calc-bana-wastage", "- " + c.banaWaste.toFixed(2));
     setText("calc-remaining-bana", c.remainingBana.toFixed(2));
 
-    // Zari Hisab
     setText("calc-last-tani-zari", (sh.pichlaZari || 0));
     setText("calc-tot-zari", c.totZari.toFixed(2));
     setText("calc-ret-zari", "- " + c.retZari.toFixed(2));
