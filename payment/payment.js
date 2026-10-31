@@ -1,280 +1,300 @@
 /* ========================================================
-   SIMPLICITY ERP - PAYMENT MODULE & ASALI PAISA PASSBOOK
+   SIMPLICITY ERP - PAYMENTS & BAKAYA MODULE
    File: payment/payment.js • Developed by Farhan Jawed
-   (Paisa Aaya/Gaya, Running Baki, Kariger Name & Delete Action)
 ======================================================== */
 
 var currentPaymentKarkhanaFilter = "all";
-var currentPaymentPage = 1;
-var paymentPageSize = 50;
+var activePaymentKarigerId = null;
 
+/**
+ * 1. Payment Module Kholna
+ */
 function openPaymentModule() {
-    if (typeof hideAllSections === "function") hideAllSections();
-    setDisplay("payment-section", "block");
-    currentPaymentPage = 1;
+    var dView = document.getElementById("dashboard-view");
+    if (dView) dView.style.display = "none";
+
+    var pSec = document.getElementById("payment-section");
+    if (pSec) pSec.style.display = "block";
+
     renderPaymentKarkhanaTabs();
     renderPaymentTable();
 }
 
-// 1. PAYMENT KARKHANA TABS
+/**
+ * 2. Karkhana Tabs Render
+ */
 function renderPaymentKarkhanaTabs() {
     var bar = document.getElementById("payment-karkhana-tabs-bar");
     if (!bar) return;
     bar.innerHTML = "";
 
-    var kList = getKarkhanasSafe();
-    var allKarigers = sanitizeKarigerList();
-    var allActive = (currentPaymentKarkhanaFilter === "all") ? " active" : "";
-    bar.innerHTML += "<button class='sheet-tab" + allActive + "' onclick='switchPaymentKarkhanaTab(\"all\")'>👥 Sabhi Karkhane (" + allKarigers.length + ")</button>";
+    var karkhanas = safeArray(getStore("karkhana_list"));
+    if (!karkhanas.length) karkhanas = [{ id: "k_main", name: "Main Godown", isDefault: true }];
 
-    kList.forEach(function(k) {
-        var count = allKarigers.filter(function(w) { 
-            return String(w.karkhanaId) === String(k.id) || (!w.karkhanaId && k.isDefault); 
-        }).length;
+    var allActive = (currentPaymentKarkhanaFilter === "all") ? " active" : "";
+    bar.innerHTML += "<button class='sheet-tab" + allActive + "' onclick='switchPaymentKarkhanaTab(\"all\")'>👥 Sabhi Godam</button>";
+
+    karkhanas.forEach(function(k) {
         var isActive = (String(currentPaymentKarkhanaFilter) === String(k.id)) ? " active" : "";
-        bar.innerHTML += "<button class='sheet-tab" + isActive + "' onclick='switchPaymentKarkhanaTab(\"" + k.id + "\")'>🏭 " + k.name + " (" + count + ")</button>";
+        bar.innerHTML += "<button class='sheet-tab" + isActive + "' onclick='switchPaymentKarkhanaTab(\"" + k.id + "\")'>🏭 " + k.name + "</button>";
     });
 }
 
 function switchPaymentKarkhanaTab(kId) {
     currentPaymentKarkhanaFilter = kId;
-    currentPaymentPage = 1;
-    renderPaymentKarkhanaTabs();
     renderPaymentTable();
 }
 
-// 2. PAYMENT TABLE WITH 50/PAGE PAGINATION
-function renderPaymentTable(flist) {
+function filterPayment() {
+    renderPaymentTable();
+}
+
+/**
+ * 3. Main Payment Table Render Karna
+ */
+function renderPaymentTable() {
     var tbody = document.getElementById("payment-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    var list = flist || sanitizeKarigerList();
+    var karigers = safeArray(getStore("kariger_list")).filter(function(k) { 
+        return k && k.name && String(k.name).trim() !== ""; 
+    });
+
     if (currentPaymentKarkhanaFilter !== "all") {
-        list = list.filter(function(k) {
+        karigers = karigers.filter(function(k) {
             return String(k.karkhanaId) === String(currentPaymentKarkhanaFilter) || (!k.karkhanaId && currentPaymentKarkhanaFilter === "k_main");
         });
     }
 
-    var txt = (document.getElementById("search-payment-input") && document.getElementById("search-payment-input").value || "").toLowerCase().trim();
-    if (txt) {
-        list = list.filter(function(k) {
-            return (String(k.name || "") + " " + String(k.saree || "") + " " + String(k.karkhanaName || "")).toLowerCase().indexOf(txt) !== -1;
-        });
-    }
+    var searchTxt = (document.getElementById("search-payment-input")?.value || "").toLowerCase().trim();
 
-    var overallPaid = 0;
-    var overallBaki = 0;
-    list.forEach(function(k) {
-        var fin = getKarigerFinanceSummary(k.id);
-        overallPaid += fin.totalPaid;
-        overallBaki += fin.currentBakaya;
+    var grandTotalPaid = 0;
+    var grandTotalBaki = 0;
+    var rowsData = [];
+
+    karigers.forEach(function(k) {
+        var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(k.id) : [];
+        var curSheet = (sheets && sheets.length) ? sheets[sheets.length - 1] : null;
+
+        var mazdoori = 0;
+        var diya = 0;
+        var baki = 0;
+
+        if (curSheet && typeof calculateSheetTotals === "function") {
+            var calc = calculateSheetTotals(curSheet);
+            mazdoori = Number(calc.grossBani || 0);
+            diya = Number(calc.totPaid || 0);
+            baki = Number(calc.remainingAmt || 0);
+        }
+
+        grandTotalPaid += diya;
+        grandTotalBaki += baki;
+
+        var kName = k.name || "Kariger";
+        var sName = k.saree || "-";
+        var gName = k.karkhanaName || "Main Godown";
+
+        var rowObj = {
+            id: k.id,
+            karkhana: gName,
+            kariger: kName,
+            saree: sName,
+            mazdoori: mazdoori,
+            diya: diya,
+            baki: baki
+        };
+
+        if (searchTxt) {
+            var fullText = (rowObj.karkhana + " " + rowObj.kariger + " " + rowObj.saree + " " + rowObj.mazdoori + " " + rowObj.diya + " " + rowObj.baki).toLowerCase();
+            if (fullText.indexOf(searchTxt) !== -1) {
+                rowsData.push(rowObj);
+            }
+        } else {
+            rowsData.push(rowObj);
+        }
     });
 
-    setElementText("total-paid-display", "₹ " + overallPaid.toFixed(2));
-    setElementText("total-baki-display", "₹ " + overallBaki.toFixed(2));
+    // Upar Summary Box Update
+    var paidDisplay = document.getElementById("total-paid-display");
+    var bakiDisplay = document.getElementById("total-baki-display");
+    if (paidDisplay) paidDisplay.textContent = "₹ " + grandTotalPaid.toFixed(2);
+    if (bakiDisplay) bakiDisplay.textContent = "₹ " + grandTotalBaki.toFixed(2);
 
-    var totalItems = list.length;
-    var totalPages = Math.ceil(totalItems / paymentPageSize) || 1;
-    if (currentPaymentPage > totalPages) currentPaymentPage = totalPages;
-    if (currentPaymentPage < 1) currentPaymentPage = 1;
-
-    var pagBar = document.getElementById("payment-pagination-bar");
-    if (pagBar) {
-        if (!totalItems) {
-            pagBar.style.display = "none";
-        } else {
-            pagBar.style.display = "flex";
-            var startIdx = (currentPaymentPage - 1) * paymentPageSize + 1;
-            var endIdx = Math.min(currentPaymentPage * paymentPageSize, totalItems);
-            var prevDis = (currentPaymentPage <= 1) ? "disabled style='opacity:0.5;'" : "";
-            var nextDis = (currentPaymentPage >= totalPages) ? "disabled style='opacity:0.5;'" : "";
-
-            pagBar.innerHTML = 
-                "<div style='color:#7c3aed;'>📊 Dikh rahe hain: " + startIdx + " - " + endIdx + " (Kul: " + totalItems + ")</div>" +
-                "<div style='display:flex; gap:8px; align-items:center;'>" +
-                    "<button class='quick-btn btn-out' " + prevDis + " onclick='prevPaymentPage()'>◀️ Pichla</button>" +
-                    "<span style='background:#fff; border:1px solid #cbd5e1; padding:4px 10px; border-radius:6px;'>Page " + currentPaymentPage + " / " + totalPages + "</span>" +
-                    "<button class='quick-btn btn-in' " + nextDis + " onclick='nextPaymentPage()'>Agla ▶️</button>" +
-                "</div>";
-        }
-    }
-
-    if (!totalItems) {
-        tbody.innerHTML = "<tr><td colspan='9' style='text-align:center; padding:20px; color:#888;'>Koi hisab nahi mila.</td></tr>";
+    if (!rowsData.length) {
+        tbody.innerHTML = "<tr><td colspan='9' style='text-align:center; padding:20px; color:#888;'>Koi Kariger Record nahi mila.</td></tr>";
         return;
     }
 
-    var pageList = list.slice((currentPaymentPage - 1) * paymentPageSize, currentPaymentPage * paymentPageSize);
-    var html = "";
-
-    pageList.forEach(function(k, idx) {
-        var fin = getKarigerFinanceSummary(k.id);
-        var bakiBadgeClass = fin.currentBakaya > 0 ? "badge-red" : "badge-green";
-        var actualIdx = (currentPaymentPage - 1) * paymentPageSize + (idx + 1);
-
-        html += "<tr>" +
-            "<td>" + actualIdx + "</td>" +
-            "<td><span class='badge-blue' style='font-size:11px;'>🏭 " + (k.karkhanaName || "Main Godown") + "</span></td>" +
-            "<td><strong>" + k.name + "</strong></td>" +
-            "<td>" + (k.saree || "-") + "</td>" +
-            "<td style='font-weight:700;'>₹ " + fin.totalMazdoori.toFixed(2) + "</td>" +
-            "<td style='color:#059669; font-weight:700;'>₹ " + fin.totalPaid.toFixed(2) + "</td>" +
-            "<td><span class='" + bakiBadgeClass + "' style='font-size:12px; font-weight:800;'>₹ " + fin.currentBakaya.toFixed(2) + "</span></td>" +
-            "<td style='text-align:center;'><button class='quick-btn btn-in' onclick='quickPayToKariger(\"" + k.id + "\")'>💵 Pay Karein</button></td>" +
-            "<td style='text-align:center;'><button class='detail-btn' style='background:#7c3aed;' onclick='viewKarigerPaymentPassbook(\"" + k.id + "\")'>📖 Paisa Passbook</button></td>" +
+    rowsData.forEach(function(r, idx) {
+        tbody.innerHTML += "<tr>" +
+            "<td>" + (idx + 1) + "</td>" +
+            "<td><span class='badge-blue'>🏭 " + r.karkhana + "</span></td>" +
+            "<td><strong>" + r.kariger + "</strong></td>" +
+            "<td>" + r.saree + "</td>" +
+            "<td style='font-weight:700;'>₹ " + r.mazdoori.toFixed(2) + "</td>" +
+            "<td style='color:#059669; font-weight:800;'>₹ " + r.diya.toFixed(2) + "</td>" +
+            "<td style='color:#dc2626; font-weight:800; font-size:15px; background:#fef2f2;'>₹ " + r.baki.toFixed(2) + "</td>" +
+            "<td style='text-align:center;'><button class='sheet-btn' style='background:#10b981; font-weight:bold; padding:4px 10px;' onclick='quickPayKariger(\"" + r.id + "\", \"" + r.kariger + "\")'>⚡ Pay</button></td>" +
+            "<td style='text-align:center;'><button class='sheet-btn' style='background:#7c3aed; font-weight:bold; padding:4px 10px;' onclick='openPaymentPassbook(\"" + r.id + "\", \"" + r.kariger + "\")'>📖 Passbook</button></td>" +
         "</tr>";
     });
-    tbody.innerHTML = html;
 }
 
-function nextPaymentPage() { currentPaymentPage++; renderPaymentTable(); }
-function prevPaymentPage() { if (currentPaymentPage > 1) { currentPaymentPage--; renderPaymentTable(); } }
-function filterPayment() { currentPaymentPage = 1; renderPaymentTable(); }
-
-// 3. QUICK PAY
-function quickPayToKariger(karId) {
-    var kar = sanitizeKarigerList().find(function(x) { return String(x.id) === String(karId); });
-    if (!kar) return;
-
-    var amt = parseFloat(prompt("Kariger " + kar.name + " ko kitna paisa diya (₹):"));
-    if (!amt || isNaN(amt) || amt <= 0) return;
+/**
+ * 4. QUICK PAY FEATURE (Direct Tani Sheet me jama hoga)
+ */
+function quickPayKariger(karigerId, karigerName) {
+    var amtStr = prompt("⚡ Quick Pay: " + karigerName + "\n\nKitna Rupya Pay karna chahte hain (₹):");
+    if (!amtStr) return;
+    var amt = parseFloat(amtStr);
+    if (isNaN(amt) || amt <= 0) return alert("Sahi amount daalein!");
 
     var payDate = prompt("Tarikh (YYYY-MM-DD):", getTodayDate()) || getTodayDate();
-    var sheets = getKarigerSheets(karId);
-    var targetSheet = sheets[sheets.length - 1];
 
-    targetSheet.rows = safeArray(targetSheet.rows);
-    targetSheet.rows.push({
-        id: "row_" + Date.now(),
+    var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(karigerId) : [];
+    if (!sheets || !sheets.length) {
+        sheets = [{
+            id: "tani_1", title: "Tani 1",
+            pichlaBana: 0, pichlaZari: 0, pichlaBani: 0,
+            banaWaste: 0, zariWaste: 0,
+            rateBana: 0.311, rateZari: 0.110, rateBani: 240,
+            note: "", rows: []
+        }];
+    }
+
+    var activeSheet = sheets[sheets.length - 1]; // LATEST SHEET
+    activeSheet.rows = safeArray(activeSheet.rows);
+
+    var newRow = {
+        id: "row_pay_" + Date.now(),
         date: payDate,
-        saree: 0,
         cone: 0,
         lessTp: 0,
         netBana: 0,
         zariQty: 0,
         topi: 0,
         netZari: 0,
+        saree: 0,
+        lott: 0,
         paid: amt,
         retBana: 0,
         retZari: 0,
-        karkhanaId: kar.karkhanaId || "k_main"
-    });
+        banaItem: activeSheet.banaItem || "",
+        zariItem: activeSheet.zariItem || "",
+        note: "Quick Pay Entry"
+    };
 
-    saveKarigerSheets(karId, sheets);
+    activeSheet.rows.push(newRow);
+
+    if (typeof saveKarigerSheets === "function") {
+        saveKarigerSheets(karigerId, sheets);
+    }
+
     renderPaymentTable();
-    if (typeof renderDashboardDayBook === "function") renderDashboardDayBook();
-    if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-    alert("✅ ₹ " + amt + " " + kar.name + " ke naam darj hua!");
+    alert("✅ ₹ " + amt + " safalta-purvak " + karigerName + " ki sheet me jud gaya!");
 }
 
-// 4. 📖 ASALI PAISA PASSBOOK (PAISA AAYA / GAYA / RUNNING BAKI)
-function viewKarigerPaymentPassbook(karId) {
-    var kar = sanitizeKarigerList().find(function(x) { return String(x.id) === String(karId); });
-    if (!kar) return;
+/**
+ * 5. PAYMENT PASSBOOK SYSTEM (Date Range Filter + Search)
+ */
+function openPaymentPassbook(karigerId, karigerName) {
+    activePaymentKarigerId = karigerId;
 
-    var titleEl = document.getElementById("modal-item-title");
-    if (titleEl) titleEl.textContent = "📖 Payment Passbook: " + kar.name + " (" + (kar.karkhanaName || "Main Godown") + ")";
+    var modal = document.getElementById("item-modal");
+    if (!modal) return;
 
-    var modalTable = document.querySelector("#item-modal table");
-    if (!modalTable) return;
+    var title = document.getElementById("modal-item-title");
+    if (title) title.textContent = "📖 Payment Passbook: " + karigerName;
 
-    // Table Header Set
-    modalTable.innerHTML = 
-        "<thead>" +
-            "<tr style='background:#7c3aed; color:white;'>" +
-                "<th>Tarikh</th>" +
-                "<th>Kariger Ka Naam</th>" +
-                "<th>Mazdoori (+ Aaya)</th>" +
-                "<th>Diya Bhugtan (- Gaya)</th>" +
-                "<th>Baki Bakaya (₹)</th>" +
-                "<th>Khata / Vivran</th>" +
-                "<th style='text-align:center;'>Action</th>" +
-            "</tr>" +
-        "</thead>" +
-        "<tbody id='modal-history-body'></tbody>";
+    var modalBody = modal.querySelector(".modal-body");
+    if (modalBody) {
+        modalBody.innerHTML = 
+            "<div style='background:#f8fafc; border:1px solid #cbd5e1; padding:12px; border-radius:10px; margin-bottom:12px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;'>" +
+                "<div style='display:flex; gap:8px; align-items:center; flex-wrap:wrap;'>" +
+                    "<div><label style='font-size:12px; font-weight:700;'>From Date:</label><br><input type='date' id='pay-pass-from-date' onchange='renderPaymentPassbookRows()'></div>" +
+                    "<div><label style='font-size:12px; font-weight:700;'>To Date:</label><br><input type='date' id='pay-pass-to-date' onchange='renderPaymentPassbookRows()'></div>" +
+                    "<div style='align-self:flex-end;'><button class='quick-btn btn-out' onclick='resetPaymentPassbookFilters()'>Reset</button></div>" +
+                "</div>" +
+                "<div style='flex:1; min-width:200px;'>" +
+                    "<label style='font-size:12px; font-weight:700;'>🔍 Search Passbook:</label><br>" +
+                    "<input type='text' id='pay-pass-search-input' class='search-box' placeholder='Search Date, Sheet, Amount...' oninput='renderPaymentPassbookRows()'>" +
+                "</div>" +
+            "</div>" +
+            "<div class='table-responsive'>" +
+                "<table>" +
+                    "<thead>" +
+                        "<tr style='background:#7c3aed; color:white; font-size:12px;'>" +
+                            "<th>TARIKH</th><th>KHATA / TANI</th><th>SAREE (PCS)</th><th>PAID (DIYEN ₹)</th><th>NOTE</th>" +
+                        "</tr>" +
+                    "</thead>" +
+                    "<tbody id='payment-passbook-table-body'></tbody>" +
+                "</table>" +
+            "</div>";
+    }
 
-    var tbody = document.getElementById("modal-history-body");
-    var sheets = getKarigerSheets(karId);
-    var runningBaki = 0;
-    var rowsFound = 0;
+    modal.style.display = "flex";
+    renderPaymentPassbookRows();
+}
 
-    sheets.forEach(function(sh, sIdx) {
-        var rBani = Number(sh.rateBani) || 240;
-        var pBani = Number(sh.pichlaBani) || Number(sh.closingBani) || 0;
+function resetPaymentPassbookFilters() {
+    var fDate = document.getElementById("pay-pass-from-date");
+    var tDate = document.getElementById("pay-pass-to-date");
+    var sInp = document.getElementById("pay-pass-search-input");
+    if (fDate) fDate.value = "";
+    if (tDate) tDate.value = "";
+    if (sInp) sInp.value = "";
+    renderPaymentPassbookRows();
+}
 
-        // Agar pichla baki hai to pehli line pichle baki ki dikhao
-        if (sIdx === 0 && pBani > 0) {
-            runningBaki += pBani;
-            rowsFound++;
-            tbody.innerHTML += "<tr style='background:#fef2f2;'>" +
-                "<td>-</td>" +
-                "<td><strong>" + kar.name + "</strong></td>" +
-                "<td style='color:#1e3a8a; font-weight:700;'>+₹ " + pBani.toFixed(2) + "</td>" +
-                "<td>-</td>" +
-                "<td style='color:#dc2626; font-weight:800;'>₹ " + runningBaki.toFixed(2) + "</td>" +
-                "<td>📦 Pichla Opening Balance (" + sh.title + ")</td>" +
-                "<td style='text-align:center;'>-</td>" +
-            "</tr>";
-        }
+function renderPaymentPassbookRows() {
+    var tbody = document.getElementById("payment-passbook-table-body");
+    if (!tbody || !activePaymentKarigerId) return;
+    tbody.innerHTML = "";
 
+    var sheets = (typeof getKarigerSheets === "function") ? getKarigerSheets(activePaymentKarigerId) : [];
+    var allRows = [];
+
+    sheets.forEach(function(sh) {
         safeArray(sh.rows).forEach(function(r) {
-            var mazdooriAmt = (Number(r.saree) || 0) * rBani;
-            var paidAmt = Number(r.paid) || 0;
-
-            if (mazdooriAmt > 0 || paidAmt > 0) {
-                runningBaki = (runningBaki + mazdooriAmt) - paidAmt;
-                rowsFound++;
-
-                var vivranText = sh.title;
-                if (r.saree > 0) vivranText += " (" + r.saree + " Saree × ₹" + rBani + ")";
-                else vivranText += " (Direct Payment)";
-
-                var deleteBtn = (paidAmt > 0) ? 
-                    "<button class='delete-btn' onclick='deletePaymentFromSheet(\"" + karId + "\", \"" + sh.id + "\", \"" + r.id + "\")'>🗑️ Delete</button>" : "-";
-
-                tbody.innerHTML += "<tr>" +
-                    "<td>" + formatDateDisplay(r.date) + "</td>" +
-                    "<td><strong>" + kar.name + "</strong></td>" +
-                    "<td style='color:#059669; font-weight:700;'>" + (mazdooriAmt > 0 ? ("+₹ " + mazdooriAmt.toFixed(2)) : "-") + "</td>" +
-                    "<td style='color:#dc2626; font-weight:700;'>" + (paidAmt > 0 ? ("-₹ " + paidAmt.toFixed(2)) : "-") + "</td>" +
-                    "<td><strong style='color:#7c3aed; font-size:13px;'>₹ " + runningBaki.toFixed(2) + "</strong></td>" +
-                    "<td>" + vivranText + "</td>" +
-                    "<td style='text-align:center;'>" + deleteBtn + "</td>" +
-                "</tr>";
+            if (Number(r.paid || 0) > 0 || Number(r.saree || 0) > 0) {
+                allRows.push({
+                    date: r.date || "-",
+                    sheetTitle: sh.title || "Tani Khata",
+                    saree: Number(r.saree || 0),
+                    paid: Number(r.paid || 0),
+                    note: r.note || (r.paid > 0 ? "Payment Diya" : "Saree Jama")
+                });
             }
         });
     });
 
-    if (!rowsFound) {
-        tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:20px; color:#888;'>Is Kariger ka abhi koi bhugtan ya mazdoori record nahi hai.</td></tr>";
+    var fDate = document.getElementById("pay-pass-from-date")?.value;
+    var tDate = document.getElementById("pay-pass-to-date")?.value;
+    var sTxt = (document.getElementById("pay-pass-search-input")?.value || "").toLowerCase().trim();
+
+    if (fDate) allRows = allRows.filter(function(x) { return x.date >= fDate; });
+    if (tDate) allRows = allRows.filter(function(x) { return x.date <= tDate; });
+
+    if (sTxt) {
+        allRows = allRows.filter(function(x) {
+            var full = (x.date + " " + x.sheetTitle + " " + x.saree + " " + x.paid + " " + x.note).toLowerCase();
+            return full.indexOf(sTxt) !== -1;
+        });
     }
 
-    setDisplay("item-modal", "flex");
-}
-
-function deletePaymentFromSheet(karId, sheetId, rowId) {
-    if (!confirm("Kya aap sach me is payment entry ko delete karna chahte hain?")) return;
-    var sheets = getKarigerSheets(karId);
-    var targetSheet = sheets.find(function(s) { return s && String(s.id) === String(sheetId); });
-    if (!targetSheet) return;
-
-    targetSheet.rows = safeArray(targetSheet.rows);
-    var rIdx = targetSheet.rows.findIndex(function(r) { return r && String(r.id) === String(rowId); });
-
-    if (rIdx !== -1) {
-        var r = targetSheet.rows[rIdx];
-        if ((Number(r.saree) || 0) === 0 && (Number(r.netBana) || 0) === 0 && (Number(r.netZari) || 0) === 0) {
-            targetSheet.rows.splice(rIdx, 1);
-        } else {
-            r.paid = 0;
-        }
-        saveKarigerSheets(karId, sheets);
-
-        viewKarigerPaymentPassbook(karId);
-        renderPaymentTable();
-        if (typeof renderDashboardDayBook === "function") renderDashboardDayBook();
-        if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
-        alert("✅ Payment entry delete ho gayi!");
+    if (!allRows.length) {
+        tbody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#888;'>Koi payment entry nahi mili.</td></tr>";
+        return;
     }
+
+    allRows.forEach(function(row) {
+        tbody.innerHTML += "<tr>" +
+            "<td>" + row.date + "</td>" +
+            "<td><strong>" + row.sheetTitle + "</strong></td>" +
+            "<td>" + (row.saree ? (row.saree + " Pcs") : "-") + "</td>" +
+            "<td style='color:#059669; font-weight:800; font-size:14px;'>" + (row.paid ? ("₹ " + row.paid) : "-") + "</td>" +
+            "<td style='color:#64748b; font-size:12px;'>" + row.note + "</td>" +
+        "</tr>";
+    });
 }
