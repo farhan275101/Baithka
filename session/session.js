@@ -3,33 +3,38 @@
    File: session/session.js • Developed by Farhan Jawed
 ======================================================== */
 
-function getSafeUserId() {
-    var uid = (typeof currentUserId !== "undefined" && currentUserId) ? String(currentUserId) : "";
-    if (!uid) {
-        try { uid = localStorage.getItem("app_current_user_id") || "app"; } catch(e) { uid = "app"; }
-    }
-    return uid.replace(/['"]+/g, '').trim() || "app";
-}
-
 function getAppSessions() {
-    var userKey = getSafeUserId() + "_app_sessions_list";
-    var raw = localStorage.getItem(userKey);
+    var uId = (typeof currentUserId !== "undefined" && currentUserId) ? currentUserId : "app";
+    var userKey = uId + "_app_sessions_list";
+    var raw = (typeof APP_MEMORY_CACHE !== "undefined" && APP_MEMORY_CACHE[userKey]) || localStorage.getItem(userKey);
     var list = [];
-    try { list = JSON.parse(raw) || []; } catch (e) {}
+    try {
+        list = (typeof raw === "string") ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
+    } catch (e) {}
+
     if (!Array.isArray(list) || !list.length) {
         list = ["2026-2027"];
-        try { localStorage.setItem(userKey, JSON.stringify(list)); } catch(e) {}
+        try { 
+            localStorage.setItem(userKey, JSON.stringify(list));
+            if (typeof APP_MEMORY_CACHE !== "undefined") APP_MEMORY_CACHE[userKey] = list;
+            if (typeof idbPut === "function") idbPut(userKey, list);
+        } catch(e) {}
     }
     return list.map(function(s) { return String(s).replace(/['"]+/g, '').trim(); });
 }
 
 function getActiveFinancialSession() {
-    var userKey = getSafeUserId() + "_app_active_session";
-    var sess = localStorage.getItem(userKey);
+    var uId = (typeof currentUserId !== "undefined" && currentUserId) ? currentUserId : "app";
+    var userKey = uId + "_app_active_session";
+    var sess = (typeof APP_MEMORY_CACHE !== "undefined" && APP_MEMORY_CACHE[userKey]) || localStorage.getItem(userKey);
     if (!sess || typeof sess !== "string" || sess === "[]") {
         var list = getAppSessions();
         sess = list[list.length - 1] || "2026-2027";
-        try { localStorage.setItem(userKey, sess); } catch(e) {}
+        try { 
+            localStorage.setItem(userKey, sess);
+            if (typeof APP_MEMORY_CACHE !== "undefined") APP_MEMORY_CACHE[userKey] = sess;
+            if (typeof idbPut === "function") idbPut(userKey, sess);
+        } catch(e) {}
     }
     return String(sess).replace(/['"]+/g, '').trim() || "2026-2027";
 }
@@ -59,22 +64,21 @@ function switchAppFinancialSession(targetSession) {
     }
 
     var cleanTarget = String(targetSession).replace(/['"]+/g, '').trim();
-    var uId = getSafeUserId();
+    var uId = (typeof currentUserId !== "undefined" && currentUserId) ? currentUserId : "app";
 
     localStorage.setItem(uId + "_app_active_session", cleanTarget);
-
-    // 🔒 DATA MIXING FIX: Clear Memory Cache completely
     if (typeof APP_MEMORY_CACHE !== "undefined") {
-        APP_MEMORY_CACHE = {};
+        APP_MEMORY_CACHE[uId + "_app_active_session"] = cleanTarget;
     }
+
+    // 🔒 DATA MIXING PREVENTION: Clear Memory Cache Completely
     if (typeof clearMemoryCache === "function") clearMemoryCache();
-    if (typeof setStore === "function") setStore("app_active_session", cleanTarget);
 
     if (typeof initIndexedDBPreload === "function") {
         initIndexedDBPreload(function() {
             populateSessionDropdown();
             if (typeof backToDashboard === "function") backToDashboard();
-            if (typeof renderKarigerTable === "function") renderKarigerTable();
+            if (typeof triggerActiveSectionRefresh === "function") triggerActiveSectionRefresh();
             if (typeof updateDashboardBadgeTotals === "function") updateDashboardBadgeTotals();
         });
     } else {
@@ -93,6 +97,7 @@ function openSessionClosingModal() {
     var cur = getActiveFinancialSession();
     if (curDisplay) curDisplay.value = cur;
 
+    // Next financial year suggestion (e.g. 2026-2027 -> 2027-2028)
     var newInp = document.getElementById("session-new-input");
     if (newInp) {
         var parts = cur.split("-");
@@ -103,6 +108,7 @@ function openSessionClosingModal() {
         }
     }
 
+    // Populate Delete Session Dropdown
     var delSel = document.getElementById("session-delete-select");
     if (delSel) {
         delSel.innerHTML = "<option value=''>-- Chunein --</option>";
@@ -120,22 +126,25 @@ function closeSessionClosingModal() {
     if (modal) modal.style.display = "none";
 }
 
-// ================= DELETE SESSION WITH AUTH =================
+// ================= DELETE SESSION WITH AUTHENTICATION =================
 function confirmAndDeleteSessionWithAuth() {
     var delSel = document.getElementById("session-delete-select");
     var targetSess = delSel ? delSel.value : "";
-    var uInp = (document.getElementById("session-del-user-id") && document.getElementById("session-del-user-id").value || "").trim();
+    var uInp = (document.getElementById("session-del-user-id") && document.getElementById("session-del-user-id").value || "").trim().toLowerCase();
     var pInp = (document.getElementById("session-del-password") && document.getElementById("session-del-password").value || "").trim();
 
     if (!targetSess) return alert("Pehle delete karne ke liye session chunein!");
     if (!uInp || !pInp) return alert("User ID aur Password daalna zaroori hai!");
 
-    var users = safeArray(getStore("app_users_list"));
+    // Exact Auth Verification from auth.js (getUsersList & user.pass)
+    var users = (typeof getUsersList === "function") ? getUsersList() : [];
     var foundUser = users.find(function(u) {
-        return u && (String(u.id) === uInp || String(u.mobile) === uInp) && String(u.password) === pInp;
+        var matchId = (u.id && String(u.id).toLowerCase() === uInp);
+        var matchMob = (u.mobile && String(u.mobile).trim() === uInp);
+        return (matchId || matchMob) && String(u.pass) === String(pInp);
     });
 
-    if (!foundUser && uInp !== "admin") {
+    if (!foundUser) {
         return alert("❌ Galat User ID ya Password! Session delete nahi hoga.");
     }
 
@@ -144,14 +153,16 @@ function confirmAndDeleteSessionWithAuth() {
         return alert("❌ Aakhri bacha hua Session delete nahi ho sakta!");
     }
 
-    if (!confirm("⚠️ KYA AAP SACH ME '" + targetSess + "' KA PURA DATA DELETE KARNA CHAHTE HAIN?\nYe wapas nahi aayega!")) {
+    if (!confirm("⚠️ KYA AAP SACH ME '" + targetSess + "' KA PURA DATA DELETE KARNA CHAHTE HAIN?\nIs saal ka sara hisab permanently delete ho jayega!")) {
         return;
     }
 
-    var uId = getSafeUserId();
+    var uId = (typeof currentUserId !== "undefined" && currentUserId) ? currentUserId : "app";
     sessions = sessions.filter(function(s) { return s !== targetSess; });
     localStorage.setItem(uId + "_app_sessions_list", JSON.stringify(sessions));
+    if (typeof idbPut === "function") idbPut(uId + "_app_sessions_list", sessions);
 
+    // Remove keys for this session from localStorage
     var prefix = uId + "_" + targetSess + "_";
     var keysToRemove = [];
     for (var i = 0; i < localStorage.length; i++) {
@@ -160,13 +171,13 @@ function confirmAndDeleteSessionWithAuth() {
     }
     keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
 
+    // Fallback if deleting currently active session
     var cur = getActiveFinancialSession();
     if (cur === targetSess) {
         var nextActive = sessions[sessions.length - 1];
         localStorage.setItem(uId + "_app_active_session", nextActive);
     }
 
-    if (typeof APP_MEMORY_CACHE !== "undefined") APP_MEMORY_CACHE = {};
     if (typeof clearMemoryCache === "function") clearMemoryCache();
 
     closeSessionClosingModal();
