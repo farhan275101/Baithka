@@ -311,3 +311,29 @@ function renderSanchaPassbookRows() {
             "<td>" + (r.date || "-") + "</td>" +
             "<td><strong>" + (r.type || "Godam Inward") + "</strong></td>" +
             "<td style='color:#1e3a8a; font-weight:700;'>" + karigerDisplay + "</td>" +
+            "<td style='color:#059669; font-weight:700;'>" + (aayaQty ? (aayaQty.toFixed(2) + " Kg") : "-") + "</td>" +
+            "<td style='color:#ea580c; font-weight:700;'>" + (gayaQty ? (gayaQty.toFixed(2) + " Kg") : "-") + "</td>" +
+            "<td style='text-align:center;'>" + actBtn + "</td>" +
+        "</tr>";
+    });
+}
+
+function deleteSanchaPurchase(id, qty) {
+    if (!confirm("Kya aap sach me ye Sancha entry delete karna chahte hain?")) return;
+    var hist = safeArray(getStore("sancha_history")).filter(function(x) { return x.id !== id; });
+    setStore("sancha_history", hist);
+
+    var list = safeArray(getStore("sancha_items"));
+    var item = list.find(function(x) {
+        return x && x.name && x.name.toLowerCase() === currentPassbookSanchaItem.toLowerCase() && (x.category || "tani").toLowerCase() === currentSanchaCategory.toLowerCase();
+    });
+    if (item) {
+        item.aaya = Number(((Number(item.aaya) || 0) - Number(qty || 0)).toFixed(2));
+        if (item.aaya < 0) item.aaya = 0;
+        item.bacha = Number(((Number(item.aaya) || 0) - (Number(item.gaya) || 0)).toFixed(2));
+        setStore("sancha_items", list);
+    }
+    renderSanchaPassbookRows();
+    renderSanchaTable();
+    alert("✅ Entry delete ho gayi!");
+}
