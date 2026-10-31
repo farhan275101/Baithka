@@ -248,7 +248,7 @@ function updateLiveStockDisplay() {
     setText("live-chukka-stock-badge", "Bacha: " + (cItem ? Number(cItem.aaya || cItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
 }
 
-// 4. TANI KHATA SHEET CONTROLLER (SHEET LEVEL LOCK FOR BANA & ZARI)
+// 4. TANI KHATA SHEET CONTROLLER (PERMANENT LOCK FOR BANA & ZARI)
 function openKarigerSheet(id) {
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(id); });
     if (!k) return alert("Kariger nahi mila!");
@@ -354,9 +354,10 @@ function loadCurrentSheetData() {
     setVal("waste-bana-input", sh.banaWaste || 0);
     setVal("waste-zari-input", sh.zariWaste || 0);
 
-    // Bana, Zari, Tani, Chukka - Ek baar sheet me load
+    // Box me hamesha bana aur zari maujood rahega
     setVal("line-bana-name", sh.banaItem || "");
     setVal("line-zari-name", sh.zariItem || "");
+
     setVal("sheet-tani-item", sh.taniItem || "");
     setVal("sheet-tani-sancha", sh.taniSancha || "");
     setVal("sheet-tani-wazan", sh.taniWazan || "");
@@ -383,9 +384,10 @@ function saveCurrentSheetConfig() {
     sh.banaWaste = parseFloat(document.getElementById("waste-bana-input")?.value) || 0;
     sh.zariWaste = parseFloat(document.getElementById("waste-zari-input")?.value) || 0;
 
-    // Upar wale 4 Item Sheet me save (ek baar)
+    // Bana aur Zari sheet level par permanently save
     sh.banaItem = (document.getElementById("line-bana-name")?.value || "").trim();
     sh.zariItem = (document.getElementById("line-zari-name")?.value || "").trim();
+
     sh.taniItem = (document.getElementById("sheet-tani-item")?.value || "").trim();
     sh.taniSancha = (document.getElementById("sheet-tani-sancha")?.value || "").trim();
     sh.taniWazan = parseFloat(document.getElementById("sheet-tani-wazan")?.value) || 0;
@@ -398,7 +400,7 @@ function saveCurrentSheetConfig() {
     updateLiveStockDisplay();
 }
 
-// 5. SAVE / UPDATE LINE ROW (AUTO PASSBOOK LOGGING WITH KARIGER NAME)
+// 5. SAVE / UPDATE LINE ROW (WITH AUTO ITEM LINKING)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
@@ -420,9 +422,11 @@ function saveTaniRow() {
     var retB = parseFloat(document.getElementById("row-retbana") && document.getElementById("row-retbana").value) || 0;
     var retZ = parseFloat(document.getElementById("row-retzari") && document.getElementById("row-retzari").value) || 0;
 
-    // Upar chune hue items se automatic link
-    var banaItemName = (sh.banaItem || document.getElementById("line-bana-name")?.value || "").trim();
-    var zariItemName = (sh.zariItem || document.getElementById("line-zari-name")?.value || "").trim();
+    // Upar chune hue Bana & Zari permanent yahan link honge aur save rahenge
+    var banaItemName = (document.getElementById("line-bana-name")?.value || sh.banaItem || "").trim();
+    var zariItemName = (document.getElementById("line-zari-name")?.value || sh.zariItem || "").trim();
+    sh.banaItem = banaItemName;
+    sh.zariItem = zariItemName;
 
     var nBana = Math.max(0, bCone - bLess);
     var nZari = Math.max(0, zQty - topi);
@@ -467,7 +471,7 @@ function saveTaniRow() {
         setStore("saree_stock", sStock);
     }
 
-    // 2. Bana Stock & Passbook History (With Kariger Name)
+    // 2. Bana Stock & Passbook History
     if (banaItemName && (nBana > 0 || retB > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
         var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === banaItemName.toLowerCase(); });
@@ -493,7 +497,7 @@ function saveTaniRow() {
         setStore("bana_history", bHist);
     }
 
-    // 3. Zari Stock & Passbook History (With Kariger Name)
+    // 3. Zari Stock & Passbook History
     if (zariItemName && (nZari > 0 || retZ > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === zariItemName.toLowerCase(); });
@@ -529,6 +533,10 @@ function saveTaniRow() {
     setVal("row-paid", "");
     setVal("row-retbana", "");
     setVal("row-retzari", "");
+
+    // Upar Bana aur Zari ko box me barqarar rakhein
+    setVal("line-bana-name", sh.banaItem || "");
+    setVal("line-zari-name", sh.zariItem || "");
 
     renderSheetRows(sh);
     updateLiveStockDisplay();
@@ -633,10 +641,7 @@ function renderSheetRows(sh) {
                 "<td style='color:#059669; font-weight:700;'>₹ " + (r.paid || 0) + "</td>" +
                 "<td>" + (r.retBana || 0) + "</td>" +
                 "<td>" + (r.retZari || 0) + "</td>" +
-                "<td style='text-align:center;'>" +
-                    "<button class='edit-btn' onclick='editTaniRow(" + idx + ")'>✏️</button> " +
-                    "<button class='delete-btn' onclick='deleteTaniRow(" + idx + ")'>🗑️</button>" +
-                "</td>" +
+                "<td style='text-align:center;'><button class='edit-btn' onclick='editTaniRow(" + idx + ")'>✏️</button> <button class='delete-btn' onclick='deleteTaniRow(" + idx + ")'>🗑️</button></td>" +
             "</tr>";
         });
     }
