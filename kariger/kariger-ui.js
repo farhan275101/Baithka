@@ -1,6 +1,6 @@
 /* ========================================================
-   SIMPLICITY ERP - KARIGER UI & SHEET ENGINE
-   File: kariger/kariger-ui.js
+   SIMPLICITY ERP - KARIGER UI & SHEET CONTROLLER
+   File: kariger/kariger-ui.js • Developed by Farhan Jawed
 ======================================================== */
 
 var activeKarigerId = null;
@@ -8,6 +8,7 @@ var activeSheetIndex = 0;
 var currentKarigerKarkhanaFilter = "all";
 var currentKarigerPage = 1;
 var karigerPageSize = 50;
+var editingRowIndex = null;
 
 function setVal(id, v) {
     var el = document.getElementById(id);
@@ -137,7 +138,11 @@ function renderKarigerTable() {
             "<td>" + (k.saree || "-") + "</td>" +
             "<td>" + (k.mobile || "-") + "</td>" +
             "<td>" + (k.date || "-") + "</td>" +
-            "<td style='text-align:center;'><button class='sheet-btn' onclick='openKarigerSheet(\"" + k.id + "\")'>📊 Tani Khata</button> <button class='edit-btn' onclick='editKariger(\"" + k.id + "\")'>✏️</button> <button class='delete-btn' onclick='deleteKariger(\"" + k.id + "\")'>🗑️</button></td>" +
+            "<td style='text-align:center;'>" +
+                "<button class='sheet-btn' onclick='openKarigerSheet(\"" + k.id + "\")'>📊 Tani Khata</button> " +
+                "<button class='edit-btn' onclick='editKariger(\"" + k.id + "\")'>✏️</button> " +
+                "<button class='delete-btn' onclick='deleteKariger(\"" + k.id + "\")'>🗑️</button>" +
+            "</td>" +
         "</tr>";
     });
     tbody.innerHTML = html;
@@ -191,7 +196,7 @@ function deleteKariger(id) {
     renderKarigerTable();
 }
 
-// 3. DROPDOWNS & LIVE STOCK DISPLAY
+// 3. DROPDOWNS & LIVE STOCK DISPLAY (4 ITEMS)
 function populateSheetDatalists() {
     var banaDl = document.getElementById("sheet-bana-dl");
     if (banaDl) {
@@ -233,15 +238,18 @@ function populateSheetDatalists() {
 function updateLiveStockDisplay() {
     var bName = (document.getElementById("line-bana-name") && document.getElementById("line-bana-name").value || "").trim().toLowerCase();
     var zName = (document.getElementById("line-zari-name") && document.getElementById("line-zari-name").value || "").trim().toLowerCase();
-    var sName = (document.getElementById("line-entry-sancha") && document.getElementById("line-entry-sancha").value || "").trim().toLowerCase();
+    var tName = (document.getElementById("line-tani-item") && document.getElementById("line-tani-item").value || "").trim().toLowerCase();
+    var cName = (document.getElementById("line-chukka-item") && document.getElementById("line-chukka-item").value || "").trim().toLowerCase();
 
     var bItem = safeArray(getStore("bana_stock")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === bName; });
     var zItem = safeArray(getStore("zari_stock")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === zName; });
-    var sItem = safeArray(getStore("sancha_items")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === sName; });
+    var tItem = safeArray(getStore("sancha_items")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === tName; });
+    var cItem = safeArray(getStore("sancha_items")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === cName; });
 
     setText("live-bana-stock-badge", "Bacha: " + (bItem ? Number(bItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
     setText("live-zari-stock-badge", "Bacha: " + (zItem ? Number(zItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
-    setText("live-sancha-stock-badge", "Bacha: " + (sItem ? Number(sItem.aaya || sItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
+    setText("live-tani-stock-badge", "Bacha: " + (tItem ? Number(tItem.aaya || tItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
+    setText("live-chukka-stock-badge", "Bacha: " + (cItem ? Number(cItem.aaya || cItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
 }
 
 // 4. TANI KHATA SHEET CONTROLLER
@@ -251,6 +259,7 @@ function openKarigerSheet(id) {
 
     activeKarigerId = k.id;
     activeSheetIndex = 0;
+    editingRowIndex = null;
 
     var kSec = document.getElementById("kariger-section");
     if (kSec) kSec.style.display = "none";
@@ -294,6 +303,9 @@ function renderSheetTabs() {
 
 function switchTaniSheetTab(idx) {
     activeSheetIndex = idx;
+    editingRowIndex = null;
+    var btn = document.getElementById("row-submit-btn");
+    if (btn) btn.textContent = "+ Line Jodein & Stock Minus";
     renderSheetTabs();
     loadCurrentSheetData();
 }
@@ -369,7 +381,7 @@ function saveCurrentSheetConfig() {
     renderSheetRows(sh);
 }
 
-// 5. SAVE LINE ROW (LESS TP & TOPI MINUS + STOCK UPDATE)
+// 5. SAVE / UPDATE LINE ROW (WITH STOCK DEDUCTION)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
@@ -377,59 +389,73 @@ function saveTaniRow() {
     if (!sh) return;
 
     var d = (document.getElementById("row-date") && document.getElementById("row-date").value) || getTodayDate();
-    var s = parseFloat(document.getElementById("row-saree") && document.getElementById("row-saree").value) || 0;
-    var sanchaName = (document.getElementById("line-entry-sancha") && document.getElementById("line-entry-sancha").value || "").trim();
     var taniName = (document.getElementById("row-taniname") && document.getElementById("row-taniname").value || "Tani-1").trim();
     var taniWazan = parseFloat(document.getElementById("row-taniwazan") && document.getElementById("row-taniwazan").value) || 0;
+    var chukkaWazan = parseFloat(document.getElementById("row-chukkawazan") && document.getElementById("row-chukkawazan").value) || 0;
 
     var bCone = parseFloat(document.getElementById("row-cone") && document.getElementById("row-cone").value) || 0;
     var bLess = parseFloat(document.getElementById("row-lesstp") && document.getElementById("row-lesstp").value) || 0;
     var zQty = parseFloat(document.getElementById("row-zariqty") && document.getElementById("row-zariqty").value) || 0;
     var topi = parseFloat(document.getElementById("row-topi") && document.getElementById("row-topi").value) || 0;
 
+    var saree = parseFloat(document.getElementById("row-saree") && document.getElementById("row-saree").value) || 0;
+    var lott = parseFloat(document.getElementById("row-lott") && document.getElementById("row-lott").value) || 0;
     var paid = parseFloat(document.getElementById("row-paid") && document.getElementById("row-paid").value) || 0;
     var retB = parseFloat(document.getElementById("row-retbana") && document.getElementById("row-retbana").value) || 0;
     var retZ = parseFloat(document.getElementById("row-retzari") && document.getElementById("row-retzari").value) || 0;
 
     var banaItemName = (document.getElementById("line-bana-name") && document.getElementById("line-bana-name").value || "").trim();
     var zariItemName = (document.getElementById("line-zari-name") && document.getElementById("line-zari-name").value || "").trim();
+    var taniItemName = (document.getElementById("line-tani-item") && document.getElementById("line-tani-item").value || "").trim();
+    var chukkaItemName = (document.getElementById("line-chukka-item") && document.getElementById("line-chukka-item").value || "").trim();
 
     var nBana = Math.max(0, bCone - bLess);
     var nZari = Math.max(0, zQty - topi);
-    var rowId = "row_" + Date.now();
 
-    var newRow = {
+    var rowId = (editingRowIndex !== null && sh.rows[editingRowIndex]) ? sh.rows[editingRowIndex].id : ("row_" + Date.now());
+
+    var rowObj = {
         id: rowId,
         date: d,
-        saree: s,
-        sancha: sanchaName,
         taniName: taniName,
         taniWazan: taniWazan,
+        chukkaWazan: chukkaWazan,
         cone: bCone,
         lessTp: bLess,
         netBana: Number(nBana.toFixed(2)),
         zariQty: zQty,
         topi: topi,
         netZari: Number(nZari.toFixed(2)),
+        saree: saree,
+        lott: lott,
         paid: paid,
         retBana: retB,
         retZari: retZ,
         banaItem: banaItemName,
-        zariItem: zariItemName
+        zariItem: zariItemName,
+        taniItem: taniItemName,
+        chukkaItem: chukkaItemName
     };
 
     sh.rows = safeArray(sh.rows);
-    sh.rows.push(newRow);
-    saveKarigerSheets(activeKarigerId, sheets);
 
-    // Saree Stock
-    if (s > 0) {
-        var sStock = safeArray(getStore("saree_stock"));
-        sStock.push({ id: "saree_" + Date.now(), refId: rowId, date: d, pcs: s });
-        setStore("saree_stock", sStock);
+    if (editingRowIndex !== null) {
+        sh.rows[editingRowIndex] = rowObj;
+        editingRowIndex = null;
+        var sBtn = document.getElementById("row-submit-btn");
+        if (sBtn) sBtn.textContent = "+ Line Jodein & Stock Minus";
+    } else {
+        sh.rows.push(rowObj);
     }
 
-    // Bana Stock
+    saveKarigerSheets(activeKarigerId, sheets);
+
+    // Stock Adjustments
+    if (saree > 0) {
+        var sStock = safeArray(getStore("saree_stock"));
+        sStock.push({ id: "saree_" + Date.now(), refId: rowId, date: d, pcs: saree });
+        setStore("saree_stock", sStock);
+    }
     if (banaItemName && (nBana > 0 || retB > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
         var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === banaItemName.toLowerCase(); });
@@ -440,8 +466,6 @@ function saveTaniRow() {
             setStore("bana_stock", bStock);
         }
     }
-
-    // Zari Stock
     if (zariItemName && (nZari > 0 || retZ > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === zariItemName.toLowerCase(); });
@@ -452,20 +476,28 @@ function saveTaniRow() {
             setStore("zari_stock", zStock);
         }
     }
-
-    // Sancha Stock
-    if (sanchaName && taniWazan > 0) {
+    if (taniItemName && taniWazan > 0) {
         var sStock = safeArray(getStore("sancha_items"));
-        var sFound = sStock.find(function(x) { return x && x.name && x.name.toLowerCase() === sanchaName.toLowerCase(); });
-        if (sFound) {
-            if (sFound.aaya !== undefined) sFound.aaya = Math.max(0, Number(((Number(sFound.aaya) || 0) - taniWazan).toFixed(2)));
-            if (sFound.bacha !== undefined) sFound.bacha = Math.max(0, Number(((Number(sFound.bacha) || 0) - taniWazan).toFixed(2)));
+        var tFound = sStock.find(function(x) { return x && x.name && x.name.toLowerCase() === taniItemName.toLowerCase(); });
+        if (tFound) {
+            if (tFound.aaya !== undefined) tFound.aaya = Math.max(0, Number(((Number(tFound.aaya) || 0) - taniWazan).toFixed(2)));
+            if (tFound.bacha !== undefined) tFound.bacha = Math.max(0, Number(((Number(tFound.bacha) || 0) - taniWazan).toFixed(2)));
             setStore("sancha_items", sStock);
+        }
+    }
+    if (chukkaItemName && chukkaWazan > 0) {
+        var sStock2 = safeArray(getStore("sancha_items"));
+        var cFound = sStock2.find(function(x) { return x && x.name && x.name.toLowerCase() === chukkaItemName.toLowerCase(); });
+        if (cFound) {
+            if (cFound.aaya !== undefined) cFound.aaya = Math.max(0, Number(((Number(cFound.aaya) || 0) - chukkaWazan).toFixed(2)));
+            if (cFound.bacha !== undefined) cFound.bacha = Math.max(0, Number(((Number(cFound.bacha) || 0) - chukkaWazan).toFixed(2)));
+            setStore("sancha_items", sStock2);
         }
     }
 
     // Reset Form
     setVal("row-saree", "");
+    setVal("row-lott", "");
     setVal("row-cone", "");
     setVal("row-lesstp", "");
     setVal("row-zariqty", "");
@@ -474,12 +506,41 @@ function saveTaniRow() {
     setVal("row-retbana", "");
     setVal("row-retzari", "");
     setVal("row-taniwazan", "");
+    setVal("row-chukkawazan", "");
 
     renderSheetRows(sh);
     updateLiveStockDisplay();
     alert("✅ Line jud gayi aur Karkhana Stock adjust ho gaya!");
 }
 
+// 6. EDIT ROW (ACTION ME EDIT KA OPTION)
+function editTaniRow(idx) {
+    var sheets = getKarigerSheets(activeKarigerId);
+    var sh = sheets[activeSheetIndex];
+    if (!sh || !sh.rows || !sh.rows[idx]) return;
+    var r = sh.rows[idx];
+
+    editingRowIndex = idx;
+    setVal("row-date", r.date || getTodayDate());
+    setVal("row-taniname", r.taniName || "");
+    setVal("row-taniwazan", r.taniWazan || "");
+    setVal("row-chukkawazan", r.chukkaWazan || "");
+    setVal("row-cone", r.cone || "");
+    setVal("row-lesstp", r.lessTp || "");
+    setVal("row-zariqty", r.zariQty || "");
+    setVal("row-topi", r.topi || "");
+    setVal("row-saree", r.saree || "");
+    setVal("row-lott", r.lott || "");
+    setVal("row-paid", r.paid || "");
+    setVal("row-retbana", r.retBana || "");
+    setVal("row-retzari", r.retZari || "");
+
+    var sBtn = document.getElementById("row-submit-btn");
+    if (sBtn) sBtn.textContent = "✏️ Update Line";
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+}
+
+// 7. DELETE ROW (ACTION ME DELETE KA OPTION)
 function deleteTaniRow(idx) {
     if (!confirm("Kya aap is row ko delete karna chahte hain?")) return;
     var sheets = getKarigerSheets(activeKarigerId);
@@ -489,7 +550,7 @@ function deleteTaniRow(idx) {
     var r = sh.rows[idx];
     if (!r) return;
 
-    // Reverse Bana
+    // Reverse Stock
     if (r.banaItem && (r.netBana > 0 || r.retBana > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
         var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.banaItem.toLowerCase(); });
@@ -500,8 +561,6 @@ function deleteTaniRow(idx) {
             setStore("bana_stock", bStock);
         }
     }
-
-    // Reverse Zari
     if (r.zariItem && (r.netZari > 0 || r.retZari > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
         var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.zariItem.toLowerCase(); });
@@ -513,17 +572,6 @@ function deleteTaniRow(idx) {
         }
     }
 
-    // Reverse Sancha
-    if (r.sancha && r.taniWazan > 0) {
-        var sStock = safeArray(getStore("sancha_items"));
-        var sFound = sStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.sancha.toLowerCase(); });
-        if (sFound) {
-            if (sFound.aaya !== undefined) sFound.aaya = Number(((Number(sFound.aaya) || 0) + Number(r.taniWazan)).toFixed(2));
-            if (sFound.bacha !== undefined) sFound.bacha = Number(((Number(sFound.bacha) || 0) + Number(r.taniWazan)).toFixed(2));
-            setStore("sancha_items", sStock);
-        }
-    }
-
     sh.rows.splice(idx, 1);
     saveKarigerSheets(activeKarigerId, sheets);
     renderSheetRows(sh);
@@ -531,22 +579,24 @@ function deleteTaniRow(idx) {
     alert("🗑️ Line delete ho gayi!");
 }
 
-// 6. RENDER ROWS + FOOTER TOTALS + 3 SUMMARY CARDS
+// 8. RENDER 12 EXACT COLUMNS (WITH EDIT & DELETE IN ACTION)
 function renderSheetRows(sh) {
     var tbody = document.getElementById("sheet-table-body");
     if (!tbody) return;
     tbody.innerHTML = "";
     var rows = safeArray(sh.rows);
 
-    var totS = 0, totW = 0, totB = 0, totZ = 0, totP = 0, totRB = 0, totRZ = 0;
+    var totS = 0, totL = 0, totW = 0, totB = 0, totZ = 0, totP = 0, totRB = 0, totRZ = 0;
 
     if (!rows.length) {
-        tbody.innerHTML = "<tr><td colspan='11' style='text-align:center; padding:15px; color:#888;'>Is Tani me koi entry nahi hai.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='12' style='text-align:center; padding:15px; color:#888;'>Is Tani me koi entry nahi hai.</td></tr>";
     } else {
         rows.forEach(function(r, idx) {
             if (!r) return;
+            var rowWazan = (Number(r.taniWazan) || 0) + (Number(r.chukkaWazan) || 0);
             totS += (Number(r.saree) || 0);
-            totW += (Number(r.taniWazan) || 0);
+            totL += (Number(r.lott) || 0);
+            totW += rowWazan;
             totB += (Number(r.netBana) || 0);
             totZ += (Number(r.netZari) || 0);
             totP += (Number(r.paid) || 0);
@@ -555,22 +605,27 @@ function renderSheetRows(sh) {
 
             tbody.innerHTML += "<tr>" +
                 "<td>" + (r.date || "-") + "</td>" +
-                "<td><strong>" + (r.saree || 0) + "</strong></td>" +
-                "<td>" + (r.sancha || "-") + "</td>" +
                 "<td>" + (r.taniName || "-") + "</td>" +
-                "<td>" + (r.taniWazan || "-") + "</td>" +
+                "<td>" + (idx + 1) + "</td>" +
+                "<td><strong>" + rowWazan.toFixed(2) + "</strong></td>" +
                 "<td><strong style='color:#059669;'>" + (r.netBana ? Number(r.netBana).toFixed(2) : "-") + "</strong></td>" +
                 "<td><strong style='color:#ea580c;'>" + (r.netZari ? Number(r.netZari).toFixed(2) : "-") + "</strong></td>" +
+                "<td>" + (r.saree || 0) + "</td>" +
+                "<td style='color:#dc2626;'><strong>" + (r.lott || 0) + "</strong></td>" +
                 "<td style='color:#059669; font-weight:700;'>₹ " + (r.paid || 0) + "</td>" +
                 "<td>" + (r.retBana || 0) + "</td>" +
                 "<td>" + (r.retZari || 0) + "</td>" +
-                "<td style='text-align:center;'><button class='delete-btn' onclick='deleteTaniRow(" + idx + ")'>🗑️</button></td>" +
+                "<td style='text-align:center;'>" +
+                    "<button class='edit-btn' onclick='editTaniRow(" + idx + ")'>✏️</button> " +
+                    "<button class='delete-btn' onclick='deleteTaniRow(" + idx + ")'>🗑️</button>" +
+                "</td>" +
             "</tr>";
         });
     }
 
     // 1. Table Footer Totals
     setText("tot-saree", totS);
+    setText("tot-lott", totL);
     setText("tot-tani-wazan", totW.toFixed(2));
     setText("tot-bana-net", totB.toFixed(2));
     setText("tot-zari-net", totZ.toFixed(2));
@@ -581,7 +636,7 @@ function renderSheetRows(sh) {
     // 2. Three Detailed Summary Cards
     var c = calculateSheetTotals(sh);
 
-    // Mazdoori Hisab
+    // Mazdoori Hisab (Lott aane par bani ka paisa katega)
     setText("calc-tot-saree", c.totSaree);
     setText("calc-tot-lott", "- " + c.totLott);
     setText("calc-net-saree", c.netSaree);
@@ -628,6 +683,8 @@ function sendKarigerWhatsAppParchi() {
               "👤 *कारीगर:* " + k.name + "\n" +
               "📑 *खाता:* " + sh.title + "\n" +
               "🥻 कुल साड़ी: *" + c.totSaree + " Pcs*\n" +
+              "⚠️ लोट साड़ी: *" + c.totLott + " Pcs*\n" +
+              "✅ नेट साड़ी: *" + c.netSaree + " Pcs*\n" +
               "🧶 बाना बकाया: *" + c.remainingBana + " Kg*\n" +
               "✨ जरी बकाया: *" + c.remainingZari + " Kg*\n" +
               "💰 कुल मजदूरी: *₹ " + c.grossBani + "*\n" +
