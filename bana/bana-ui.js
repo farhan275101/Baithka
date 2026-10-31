@@ -106,7 +106,6 @@ function saveNewBana() {
     }
     setStore("bana_stock", list);
 
-    // Save in Bana History (Khareed / Inward)
     var hist = safeArray(getStore("bana_history"));
     hist.push({
         id: "bhist_" + Date.now(),
@@ -120,7 +119,6 @@ function saveNewBana() {
     });
     setStore("bana_history", hist);
 
-    // Reset Form
     if (document.getElementById("bana-new-name")) document.getElementById("bana-new-name").value = "";
     if (document.getElementById("bana-aaya")) document.getElementById("bana-aaya").value = "";
     toggleBanaForm();
@@ -176,7 +174,7 @@ function renderBanaTable() {
     if (opVal) opVal.textContent = totalBacha.toFixed(2) + " Kg Kul Bacha";
 }
 
-// ================= PASSBOOK ENGINE (SEARCH, DATE FILTER, KARIGER NAME, DELETE KHAREED) =================
+// ================= PASSBOOK (SEARCH, DATE FILTER, DELETE RULE) =================
 
 function openBanaPassbook(itemName) {
     currentPassbookBanaItem = itemName;
@@ -239,14 +237,12 @@ function renderBanaPassbookRows() {
     var tDate = document.getElementById("pass-to-date")?.value;
     var sTxt = (document.getElementById("pass-search-input")?.value || "").toLowerCase().trim();
 
-    // Date Range Filter
     if (fDate) hist = hist.filter(function(x) { return x.date >= fDate; });
     if (tDate) hist = hist.filter(function(x) { return x.date <= tDate; });
 
-    // Multi-Column Search
     if (sTxt) {
         hist = hist.filter(function(x) {
-            var fullRow = (String(x.date || "") + " " + String(x.type || "") + " " + String(x.kariger || "") + " " + String(x.aaya || "") + " " + String(x.gaya || "")).toLowerCase();
+            var fullRow = (String(x.date || "") + " " + String(x.type || "") + " " + String(x.kariger || "") + " " + String(x.aaya || x.qty || x.wazan || "") + " " + String(x.gaya || "")).toLowerCase();
             return fullRow.indexOf(sTxt) !== -1;
         });
     }
@@ -257,17 +253,23 @@ function renderBanaPassbookRows() {
     }
 
     hist.forEach(function(r) {
-        var isKhareed = (r.type && r.type.indexOf("Khareed") !== -1);
-        var actBtn = isKhareed 
-            ? ("<button class='delete-btn' onclick='deleteBanaPurchase(\"" + r.id + "\", " + (Number(r.aaya) || 0) + ")'>🗑️ Delete</button>") 
-            : "<span style='color:#64748b; font-size:11px; font-weight:700;'>🔒 Kariger Khata</span>";
+        var aayaQty = Number(r.aaya || r.qty || r.wazan || r.weight || 0);
+        var gayaQty = Number(r.gaya || 0);
+
+        // Kariger Entry check: refId ya kariger name se detect hoga
+        var isKarigerEntry = r.refId || (r.type && r.type.toLowerCase().indexOf("kariger") !== -1);
+        var karigerDisplay = (r.kariger && r.kariger !== "-" && r.kariger !== "undefined") ? ("👤 " + r.kariger) : "📦 Factory Inward";
+
+        var actBtn = isKarigerEntry 
+            ? "<span style='color:#64748b; font-size:11px; font-weight:700;'>🔒 Kariger Khata</span>"
+            : ("<button class='delete-btn' onclick='deleteBanaPurchase(\"" + r.id + "\", " + aayaQty + ")'>🗑️ Delete</button>");
 
         tbody.innerHTML += "<tr>" +
             "<td>" + (r.date || "-") + "</td>" +
-            "<td><strong>" + (r.type || "-") + "</strong></td>" +
-            "<td style='color:#1e3a8a; font-weight:700;'>" + (r.kariger !== "-" ? ("👤 " + r.kariger) : "📦 Factory Inward") + "</td>" +
-            "<td style='color:#059669; font-weight:700;'>" + (Number(r.aaya) > 0 ? Number(r.aaya).toFixed(2) : "-") + "</td>" +
-            "<td style='color:#ea580c; font-weight:700;'>" + (Number(r.gaya) > 0 ? Number(r.gaya).toFixed(2) : "-") + "</td>" +
+            "<td><strong>" + (r.type || "Godam Inward") + "</strong></td>" +
+            "<td style='color:#1e3a8a; font-weight:700;'>" + karigerDisplay + "</td>" +
+            "<td style='color:#059669; font-weight:700;'>" + (aayaQty > 0 ? aayaQty.toFixed(2) : "-") + "</td>" +
+            "<td style='color:#ea580c; font-weight:700;'>" + (gayaQty > 0 ? gayaQty.toFixed(2) : "-") + "</td>" +
             "<td style='text-align:center;'>" + actBtn + "</td>" +
         "</tr>";
     });
@@ -276,11 +278,9 @@ function renderBanaPassbookRows() {
 function deleteBanaPurchase(histId, qty) {
     if (!confirm("Kya aap is Khareed entry ko delete karna chahte hain?\nStock se " + qty + " Kg wazan minus ho jayega.")) return;
 
-    // 1. History se remove
     var hist = safeArray(getStore("bana_history")).filter(function(x) { return String(x.id) !== String(histId); });
     setStore("bana_history", hist);
 
-    // 2. Stock Adjust: Aaya kam hoga
     var list = safeArray(getStore("bana_stock"));
     var item = list.find(function(x) { return x && x.name && x.name.toLowerCase() === currentPassbookBanaItem.toLowerCase(); });
     if (item) {
