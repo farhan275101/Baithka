@@ -24,7 +24,7 @@ function sanitizeKarigerList() {
     return list.filter(function(k) { return k && k.name && String(k.name).trim() !== ""; });
 }
 
-// 1. NAVIGATION (DASHBOARD & KARIGER SWITCHING)
+// 1. NAVIGATION
 function openKarigerModule() {
     var dView = document.getElementById("dashboard-view");
     if (dView) dView.style.display = "none";
@@ -137,11 +137,7 @@ function renderKarigerTable() {
             "<td>" + (k.saree || "-") + "</td>" +
             "<td>" + (k.mobile || "-") + "</td>" +
             "<td>" + (k.date || "-") + "</td>" +
-            "<td style='text-align:center;'>" +
-                "<button class='sheet-btn' onclick='openKarigerSheet(\"" + k.id + "\")'>📊 Tani Khata</button> " +
-                "<button class='edit-btn' onclick='editKariger(\"" + k.id + "\")'>✏️</button> " +
-                "<button class='delete-btn' onclick='deleteKariger(\"" + k.id + "\")'>🗑️</button>" +
-            "</td>" +
+            "<td style='text-align:center;'><button class='sheet-btn' onclick='openKarigerSheet(\"" + k.id + "\")'>📊 Tani Khata</button> <button class='edit-btn' onclick='editKariger(\"" + k.id + "\")'>✏️</button> <button class='delete-btn' onclick='deleteKariger(\"" + k.id + "\")'>🗑️</button></td>" +
         "</tr>";
     });
     tbody.innerHTML = html;
@@ -195,7 +191,60 @@ function deleteKariger(id) {
     renderKarigerTable();
 }
 
-// 3. TANI KHATA SHEET CONTROLLER
+// 3. DROPDOWNS & LIVE STOCK DISPLAY
+function populateSheetDatalists() {
+    var banaDl = document.getElementById("sheet-bana-dl");
+    if (banaDl) {
+        banaDl.innerHTML = "";
+        var uB = [];
+        safeArray(getStore("bana_stock")).forEach(function(b) {
+            if (b && b.name && uB.indexOf(b.name.trim().toLowerCase()) === -1) {
+                uB.push(b.name.trim().toLowerCase());
+                var opt = document.createElement("option"); opt.value = b.name.trim(); banaDl.appendChild(opt);
+            }
+        });
+    }
+
+    var zariDl = document.getElementById("sheet-zari-dl");
+    if (zariDl) {
+        zariDl.innerHTML = "";
+        var uZ = [];
+        safeArray(getStore("zari_stock")).forEach(function(z) {
+            if (z && z.name && uZ.indexOf(z.name.trim().toLowerCase()) === -1) {
+                uZ.push(z.name.trim().toLowerCase());
+                var opt = document.createElement("option"); opt.value = z.name.trim(); zariDl.appendChild(opt);
+            }
+        });
+    }
+
+    var sanchaDl = document.getElementById("sheet-sancha-dl");
+    if (sanchaDl) {
+        sanchaDl.innerHTML = "";
+        var uS = [];
+        safeArray(getStore("sancha_items")).forEach(function(s) {
+            if (s && s.name && uS.indexOf(s.name.trim().toLowerCase()) === -1) {
+                uS.push(s.name.trim().toLowerCase());
+                var opt = document.createElement("option"); opt.value = s.name.trim(); sanchaDl.appendChild(opt);
+            }
+        });
+    }
+}
+
+function updateLiveStockDisplay() {
+    var bName = (document.getElementById("line-bana-name") && document.getElementById("line-bana-name").value || "").trim().toLowerCase();
+    var zName = (document.getElementById("line-zari-name") && document.getElementById("line-zari-name").value || "").trim().toLowerCase();
+    var sName = (document.getElementById("line-entry-sancha") && document.getElementById("line-entry-sancha").value || "").trim().toLowerCase();
+
+    var bItem = safeArray(getStore("bana_stock")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === bName; });
+    var zItem = safeArray(getStore("zari_stock")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === zName; });
+    var sItem = safeArray(getStore("sancha_items")).find(function(x) { return x && x.name && x.name.trim().toLowerCase() === sName; });
+
+    setText("live-bana-stock-badge", "Bacha: " + (bItem ? Number(bItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
+    setText("live-zari-stock-badge", "Bacha: " + (zItem ? Number(zItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
+    setText("live-sancha-stock-badge", "Bacha: " + (sItem ? Number(sItem.aaya || sItem.bacha || 0).toFixed(2) : "0.00") + " Kg");
+}
+
+// 4. TANI KHATA SHEET CONTROLLER
 function openKarigerSheet(id) {
     var k = sanitizeKarigerList().find(function(x) { return String(x.id) === String(id); });
     if (!k) return alert("Kariger nahi mila!");
@@ -223,6 +272,7 @@ function openKarigerSheet(id) {
         saveKarigerSheets(activeKarigerId, sheets);
     }
 
+    populateSheetDatalists();
     renderSheetTabs();
     loadCurrentSheetData();
 }
@@ -297,9 +347,29 @@ function loadCurrentSheetData() {
     setVal("waste-zari-input", sh.zariWaste || 0);
 
     renderSheetRows(sh);
+    updateLiveStockDisplay();
 }
 
-// 4. ADD LINE ENTRY (LESS TP & TOPI MINUS HO KAR NET JUDNA)
+function saveCurrentSheetConfig() {
+    if (!activeKarigerId) return;
+    var sheets = getKarigerSheets(activeKarigerId);
+    var sh = sheets[activeSheetIndex];
+    if (!sh) return;
+
+    sh.rateBana = parseFloat(document.getElementById("rate-bana-input")?.value) || 0;
+    sh.rateZari = parseFloat(document.getElementById("rate-zari-input")?.value) || 0;
+    sh.rateBani = parseFloat(document.getElementById("rate-bani-input")?.value) || 0;
+    sh.pichlaBana = parseFloat(document.getElementById("pichla-bana-input")?.value) || 0;
+    sh.pichlaZari = parseFloat(document.getElementById("pichla-zari-input")?.value) || 0;
+    sh.pichlaBani = parseFloat(document.getElementById("pichla-bani-input")?.value) || 0;
+    sh.banaWaste = parseFloat(document.getElementById("waste-bana-input")?.value) || 0;
+    sh.zariWaste = parseFloat(document.getElementById("waste-zari-input")?.value) || 0;
+
+    saveKarigerSheets(activeKarigerId, sheets);
+    renderSheetRows(sh);
+}
+
+// 5. SAVE LINE ROW (LESS TP & TOPI MINUS + REAL STOCK DEDUCTION IN KG)
 function saveTaniRow() {
     if (!activeKarigerId) return alert("Pehle Kariger chunein!");
     var sheets = getKarigerSheets(activeKarigerId);
@@ -308,16 +378,24 @@ function saveTaniRow() {
 
     var d = (document.getElementById("row-date") && document.getElementById("row-date").value) || getTodayDate();
     var s = parseFloat(document.getElementById("row-saree") && document.getElementById("row-saree").value) || 0;
-    var cone = parseFloat(document.getElementById("row-cone") && document.getElementById("row-cone").value) || 0;
-    var lessTp = parseFloat(document.getElementById("row-lesstp") && document.getElementById("row-lesstp").value) || 0;
+    var sanchaName = (document.getElementById("line-entry-sancha") && document.getElementById("line-entry-sancha").value || "").trim();
+    var taniName = (document.getElementById("row-taniname") && document.getElementById("row-taniname").value || "Tani-1").trim();
+    var taniWazan = parseFloat(document.getElementById("row-taniwazan") && document.getElementById("row-taniwazan").value) || 0;
+
+    var bCone = parseFloat(document.getElementById("row-cone") && document.getElementById("row-cone").value) || 0;
+    var bLess = parseFloat(document.getElementById("row-lesstp") && document.getElementById("row-lesstp").value) || 0;
     var zQty = parseFloat(document.getElementById("row-zariqty") && document.getElementById("row-zariqty").value) || 0;
     var topi = parseFloat(document.getElementById("row-topi") && document.getElementById("row-topi").value) || 0;
+
     var paid = parseFloat(document.getElementById("row-paid") && document.getElementById("row-paid").value) || 0;
     var retB = parseFloat(document.getElementById("row-retbana") && document.getElementById("row-retbana").value) || 0;
     var retZ = parseFloat(document.getElementById("row-retzari") && document.getElementById("row-retzari").value) || 0;
 
-    // NET FORMULA
-    var nBana = Math.max(0, cone - lessTp);
+    var banaItemName = (document.getElementById("line-bana-name") && document.getElementById("line-bana-name").value || "").trim();
+    var zariItemName = (document.getElementById("line-zari-name") && document.getElementById("line-zari-name").value || "").trim();
+
+    // NET FORMULAS
+    var nBana = Math.max(0, bCone - bLess);
     var nZari = Math.max(0, zQty - topi);
     var rowId = "row_" + Date.now();
 
@@ -325,47 +403,69 @@ function saveTaniRow() {
         id: rowId,
         date: d,
         saree: s,
-        cone: cone,
-        lessTp: lessTp,
+        sancha: sanchaName,
+        taniName: taniName,
+        taniWazan: taniWazan,
+        cone: bCone,
+        lessTp: bLess,
         netBana: Number(nBana.toFixed(2)),
         zariQty: zQty,
         topi: topi,
         netZari: Number(nZari.toFixed(2)),
         paid: paid,
         retBana: retB,
-        retZari: retZ
+        retZari: retZ,
+        banaItem: banaItemName,
+        zariItem: zariItemName
     };
 
     sh.rows = safeArray(sh.rows);
     sh.rows.push(newRow);
     saveKarigerSheets(activeKarigerId, sheets);
 
-    // Karkhana Stock Update
+    // 1. Saree Stock
     if (s > 0) {
         var sStock = safeArray(getStore("saree_stock"));
         sStock.push({ id: "saree_" + Date.now(), refId: rowId, date: d, pcs: s });
         setStore("saree_stock", sStock);
     }
-    if (nBana > 0 || retB > 0) {
+
+    // 2. Bana Stock: Net Bana Minus (-), Ret Bana Plus (+)
+    if (banaItemName && (nBana > 0 || retB > 0)) {
         var bStock = safeArray(getStore("bana_stock"));
-        if (bStock.length > 0) {
-            bStock[0].gaya = Number(((Number(bStock[0].gaya) || 0) + nBana).toFixed(2));
-            if (retB > 0) bStock[0].aaya = Number(((Number(bStock[0].aaya) || 0) + retB).toFixed(2));
-            bStock[0].bacha = Number(((Number(bStock[0].aaya) || 0) - (Number(bStock[0].gaya) || 0)).toFixed(2));
+        var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === banaItemName.toLowerCase(); });
+        if (bFound) {
+            bFound.gaya = Number(((Number(bFound.gaya) || 0) + nBana).toFixed(2));
+            if (retB > 0) bFound.aaya = Number(((Number(bFound.aaya) || 0) + retB).toFixed(2));
+            bFound.bacha = Number(((Number(bFound.aaya) || 0) - (Number(bFound.gaya) || 0)).toFixed(2));
             setStore("bana_stock", bStock);
         }
     }
-    if (nZari > 0 || retZ > 0) {
+
+    // 3. Zari Stock: Net Zari Minus (-), Ret Zari Plus (+)
+    if (zariItemName && (nZari > 0 || retZ > 0)) {
         var zStock = safeArray(getStore("zari_stock"));
-        if (zStock.length > 0) {
-            zStock[0].gaya = Number(((Number(zStock[0].gaya) || 0) + nZari).toFixed(2));
-            if (retZ > 0) zStock[0].aaya = Number(((Number(zStock[0].aaya) || 0) + retZ).toFixed(2));
-            zStock[0].bacha = Number(((Number(zStock[0].aaya) || 0) - (Number(zStock[0].gaya) || 0)).toFixed(2));
+        var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === zariItemName.toLowerCase(); });
+        if (zFound) {
+            zFound.gaya = Number(((Number(zFound.gaya) || 0) + nZari).toFixed(2));
+            if (retZ > 0) zFound.aaya = Number(((Number(zFound.aaya) || 0) + retZ).toFixed(2));
+            zFound.bacha = Number(((Number(zFound.aaya) || 0) - (Number(zFound.gaya) || 0)).toFixed(2));
             setStore("zari_stock", zStock);
         }
     }
 
-    // Reset Form
+    // 4. Sancha Stock: Tani Wazan (Kg) seedhe Minus (-)
+    if (sanchaName && taniWazan > 0) {
+        var sStock = safeArray(getStore("sancha_items"));
+        var sFound = sStock.find(function(x) { return x && x.name && x.name.toLowerCase() === sanchaName.toLowerCase(); });
+        if (sFound) {
+            if (sFound.aaya !== undefined) sFound.aaya = Math.max(0, Number(((Number(sFound.aaya) || 0) - taniWazan).toFixed(2)));
+            if (sFound.bacha !== undefined) sFound.bacha = Math.max(0, Number(((Number(sFound.bacha) || 0) - taniWazan).toFixed(2)));
+            setStore("sancha_items", sStock);
+        }
+    }
+
+    // Form Reset
     setVal("row-saree", "");
     setVal("row-cone", "");
     setVal("row-lesstp", "");
@@ -374,9 +474,11 @@ function saveTaniRow() {
     setVal("row-paid", "");
     setVal("row-retbana", "");
     setVal("row-retzari", "");
+    setVal("row-taniwazan", "");
 
     renderSheetRows(sh);
-    alert("✅ Line jud gayi!");
+    updateLiveStockDisplay();
+    alert("✅ Line jud gayi aur Karkhana Stock adjust ho gaya!");
 }
 
 function deleteTaniRow(idx) {
@@ -385,12 +487,52 @@ function deleteTaniRow(idx) {
     var sh = sheets[activeSheetIndex];
     if (!sh) return;
     sh.rows = safeArray(sh.rows);
+    var r = sh.rows[idx];
+    if (!r) return;
+
+    // Reverse Bana
+    if (r.banaItem && (r.netBana > 0 || r.retBana > 0)) {
+        var bStock = safeArray(getStore("bana_stock"));
+        var bFound = bStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.banaItem.toLowerCase(); });
+        if (bFound) {
+            bFound.gaya = Math.max(0, Number(((Number(bFound.gaya) || 0) - (Number(r.netBana) || 0)).toFixed(2)));
+            if (r.retBana > 0) bFound.aaya = Math.max(0, Number(((Number(bFound.aaya) || 0) - Number(r.retBana)).toFixed(2)));
+            bFound.bacha = Number(((Number(bFound.aaya) || 0) - (Number(bFound.gaya) || 0)).toFixed(2));
+            setStore("bana_stock", bStock);
+        }
+    }
+
+    // Reverse Zari
+    if (r.zariItem && (r.netZari > 0 || r.retZari > 0)) {
+        var zStock = safeArray(getStore("zari_stock"));
+        var zFound = zStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.zariItem.toLowerCase(); });
+        if (zFound) {
+            zFound.gaya = Math.max(0, Number(((Number(zFound.gaya) || 0) - (Number(r.netZari) || 0)).toFixed(2)));
+            if (r.retZari > 0) zFound.aaya = Math.max(0, Number(((Number(zFound.aaya) || 0) - Number(r.retZari)).toFixed(2)));
+            zFound.bacha = Number(((Number(zFound.aaya) || 0) - (Number(zFound.gaya) || 0)).toFixed(2));
+            setStore("zari_stock", zStock);
+        }
+    }
+
+    // Reverse Sancha
+    if (r.sancha && r.taniWazan > 0) {
+        var sStock = safeArray(getStore("sancha_items"));
+        var sFound = sStock.find(function(x) { return x && x.name && x.name.toLowerCase() === r.sancha.toLowerCase(); });
+        if (sFound) {
+            if (sFound.aaya !== undefined) sFound.aaya = Number(((Number(sFound.aaya) || 0) + Number(r.taniWazan)).toFixed(2));
+            if (sFound.bacha !== undefined) sFound.bacha = Number(((Number(sFound.bacha) || 0) + Number(r.taniWazan)).toFixed(2));
+            setStore("sancha_items", sStock);
+        }
+    }
+
     sh.rows.splice(idx, 1);
     saveKarigerSheets(activeKarigerId, sheets);
     renderSheetRows(sh);
+    updateLiveStockDisplay();
+    alert("🗑️ Line delete ho gayi!");
 }
 
-// 5. RENDER 12 EXACT COLUMNS (DELETE BUTTON AAKHRI ME)
+// 6. RENDER ROWS (11 COLUMNS)
 function renderSheetRows(sh) {
     var tbody = document.getElementById("sheet-table-body");
     if (!tbody) return;
@@ -398,18 +540,17 @@ function renderSheetRows(sh) {
     var rows = safeArray(sh.rows);
 
     if (!rows.length) {
-        tbody.innerHTML = "<tr><td colspan='12' style='text-align:center; padding:15px; color:#888;'>Is Tani me koi entry nahi hai.</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='11' style='text-align:center; padding:15px; color:#888;'>Is Tani me koi entry nahi hai.</td></tr>";
     } else {
         rows.forEach(function(r, idx) {
             if (!r) return;
             tbody.innerHTML += "<tr>" +
                 "<td>" + (r.date || "-") + "</td>" +
                 "<td><strong>" + (r.saree || 0) + "</strong></td>" +
-                "<td>" + (r.cone || 0) + "</td>" +
-                "<td>" + (r.lessTp || 0) + "</td>" +
+                "<td>" + (r.sancha || "-") + "</td>" +
+                "<td>" + (r.taniName || "-") + "</td>" +
+                "<td>" + (r.taniWazan || "-") + "</td>" +
                 "<td><strong style='color:#059669;'>" + (r.netBana || 0) + "</strong></td>" +
-                "<td>" + (r.zariQty || 0) + "</td>" +
-                "<td>" + (r.topi || 0) + "</td>" +
                 "<td><strong style='color:#ea580c;'>" + (r.netZari || 0) + "</strong></td>" +
                 "<td style='color:#059669; font-weight:700;'>₹ " + (r.paid || 0) + "</td>" +
                 "<td>" + (r.retBana || 0) + "</td>" +
