@@ -1,14 +1,14 @@
 /* ========================================================
    SIMPLICITY ERP - 5-STAGE SEQUENTIAL YEAR-END CLOSING
    File: session/session-closing.js • Developed by Farhan Jawed
-   (10-10 Kariger Chunks, Stock Freezing & Non-Freezing Closing)
+   (Safe 25-Kariger Non-Freezing Chunks + IndexedDB Commit)
 ======================================================== */
 
 var pendingTransferNewSession = null;
 var stage1_oldKarigers = [];
 var stage1_newKarigerSheetsMap = {};
 var stage1_idx = 0;
-var stage1_chunkSize = 10;
+var stage1_chunkSize = 25; // 2000+ kariger ke liye fastest & non-freezing size
 
 var stage2_newSareeStock = [];
 var stage2_newFinStock = [];
@@ -39,7 +39,6 @@ function startSequentialYearClosing() {
 
     setDisplay("session-transfer-modal", "flex");
     setDisplay("transfer-progress-view", "block");
-    setDisplay("transfer-welcome-view", "none");
 
     for (var i = 1; i <= 5; i++) {
         var bar = document.getElementById("stage-bar-" + i);
@@ -61,7 +60,7 @@ function startSequentialYearClosing() {
     }, 150);
 }
 
-// STAGE 1: KARIGER KHATA (10-10 CHUNKS)
+// STAGE 1: KARIGER KHATA (25-25 CHUNKS)
 function runStage1_Karigers(curSess, newSess) {
     stage1_oldKarigers = safeArray(getStore("kariger_list"));
     stage1_newKarigerSheetsMap = {};
@@ -69,7 +68,7 @@ function runStage1_Karigers(curSess, newSess) {
 
     var badge = document.getElementById("stage-badge-1");
     if (badge) {
-        badge.textContent = "⏳ Downloading...";
+        badge.textContent = "⏳ Transferring...";
         badge.style.background = "#eff6ff";
         badge.style.color = "#2563eb";
     }
@@ -116,7 +115,7 @@ function processNextKarigerChunk(curSess, newSess) {
     if (mainBar) mainBar.style.width = Math.floor(pct * 0.3) + "%";
 
     if (stage1_idx < total) {
-        setTimeout(function() { processNextKarigerChunk(curSess, newSess); }, 15);
+        setTimeout(function() { processNextKarigerChunk(curSess, newSess); }, 20);
     } else {
         var badge1 = document.getElementById("stage-badge-1");
         if (badge1) {
@@ -130,7 +129,9 @@ function processNextKarigerChunk(curSess, newSess) {
 
 // STAGE 2: SAREE STOCK
 function runStage2_SareeStock(curSess, newSess) {
-    var karkhanas = getKarkhanasSafe();
+    var karkhanas = (typeof getKarkhanasSafe === "function") ? getKarkhanasSafe() : safeArray(getStore("karkhana_list"));
+    if (!karkhanas.length) karkhanas = [{ id: "k_main", name: "Main Godown", isDefault: true }];
+
     var allSarees = safeArray(getStore("saree_stock"));
     stage2_newSareeStock = [];
 
@@ -204,7 +205,9 @@ function runStage2_SareeStock(curSess, newSess) {
 
 // STAGE 3: BANA & ZARI STOCK FREEZE
 function runStage3_BanaZariStock(curSess, newSess) {
-    var karkhanas = getKarkhanasSafe();
+    var karkhanas = (typeof getKarkhanasSafe === "function") ? getKarkhanasSafe() : safeArray(getStore("karkhana_list"));
+    if (!karkhanas.length) karkhanas = [{ id: "k_main", name: "Main Godown", isDefault: true }];
+
     stage3_newBanaStock = [];
     var banaItems = safeArray(getStore("bana_stock"));
     var uniqueBanaNames = [];
@@ -325,17 +328,28 @@ function runStage4_SanchaAndJobwork(curSess, newSess) {
 
 // STAGE 5: SAVE TO NEW SESSION & SWITCH
 function commitStage5_Finalize(curSess, newSess) {
+    var uId = getSafeUserId();
     var sessions = getAppSessions();
     if (sessions.indexOf(newSess) === -1) sessions.push(newSess);
-    localStorage.setItem((currentUserId || "app") + "_app_sessions_list", JSON.stringify(sessions));
+    localStorage.setItem(uId + "_app_sessions_list", JSON.stringify(sessions));
 
     var setTargetStore = function(key, data) {
-        var fullKey = currentUserId + "_" + newSess + "_" + key;
-        APP_MEMORY_CACHE[fullKey] = data;
-        if (typeof idbPut === "function") idbPut(fullKey, data);
-        try { localStorage.setItem(fullKey, JSON.stringify(data)); } catch(e) {}
-        if (db && currentUserId) {
-            db.ref("users/" + currentUserId + "/" + newSess + "_" + key).set(data);
+        var fullKey = uId + "_" + newSess + "_" + key;
+        if (typeof APP_MEMORY_CACHE !== "undefined") {
+            APP_MEMORY_CACHE[fullKey] = data;
+        }
+        // Asli Bada Database: IndexedDB
+        if (typeof idbPut === "function") {
+            try { idbPut(fullKey, data); } catch(e) {}
+        }
+        // LocalStorage fallback
+        try { 
+            localStorage.setItem(fullKey, JSON.stringify(data)); 
+        } catch(e) {}
+
+        // Firebase Cloud Sync
+        if (typeof db !== "undefined" && db && uId) {
+            try { db.ref("users/" + uId + "/" + newSess + "_" + key).set(data); } catch(e) {}
         }
     };
 
@@ -354,7 +368,7 @@ function commitStage5_Finalize(curSess, newSess) {
         setTargetStore("jobwork_sheets_" + wId, stage4_newJwSheetsMap[wId]);
     }
 
-    localStorage.setItem((currentUserId || "app") + "_app_active_session", newSess);
+    localStorage.setItem(uId + "_app_active_session", newSess);
 
     var bar5 = document.getElementById("stage-bar-5");
     var badge5 = document.getElementById("stage-badge-5");
