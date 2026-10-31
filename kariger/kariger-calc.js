@@ -43,17 +43,20 @@ function saveKarigerSheets(karId, sheets) {
 // 2. TANI SHEET TOTAL CALCULATION (CORE FORMULAS)
 function calculateSheetTotals(sh) {
     var def = {
-        totSaree: 0, totNetBana: 0, totNetZari: 0, totPaid: 0,
+        totSaree: 0, totLott: 0, netSaree: 0, totTaniWazan: 0,
+        totNetBana: 0, totNetZari: 0, totPaid: 0,
         totRetBana: 0, totRetZari: 0, grossBani: 0,
         remainingBana: 0, remainingZari: 0, remainingAmt: 0
     };
     if (!sh || typeof sh !== "object") return def;
 
-    var sPcs = 0, nBana = 0, nZari = 0, paid = 0, retB = 0, retZ = 0;
+    var sPcs = 0, lott = 0, taniW = 0, nBana = 0, nZari = 0, paid = 0, retB = 0, retZ = 0;
 
     safeArray(sh.rows).forEach(function(r) {
         if (!r) return;
         sPcs += (Number(r.saree) || 0);
+        lott += (Number(r.lott) || 0);
+        taniW += (Number(r.taniWazan) || 0);
         nBana += (Number(r.netBana) || 0);
         nZari += (Number(r.netZari) || 0);
         paid += (Number(r.paid) || 0);
@@ -72,18 +75,22 @@ function calculateSheetTotals(sh) {
     var wBana = Number(sh.banaWaste) || 0;
     var wZari = Number(sh.zariWaste) || 0;
 
-    // Formulas
-    var expectedBanaUsed = (sPcs * rBana) + wBana;
-    var expectedZariUsed = (sPcs * rZari) + wZari;
+    // Formulas: Saree - Lott = Net Saree
+    var netSaree = Math.max(0, sPcs - lott);
+    var expectedBanaUsed = (netSaree * rBana) + wBana;
+    var expectedZariUsed = (netSaree * rZari) + wZari;
 
     var remBana = (pBana + nBana) - (expectedBanaUsed + retB);
     var remZari = (pZari + nZari) - (expectedZariUsed + retZ);
 
-    var grossBani = sPcs * rBani;
+    var grossBani = netSaree * rBani;
     var remAmt = (pBani + grossBani) - paid;
 
     return {
         totSaree: sPcs,
+        totLott: lott,
+        netSaree: netSaree,
+        totTaniWazan: Number(taniW.toFixed(2)),
         totNetBana: Number(nBana.toFixed(2)),
         totNetZari: Number(nZari.toFixed(2)),
         totPaid: Number(paid.toFixed(2)),
@@ -96,7 +103,7 @@ function calculateSheetTotals(sh) {
     };
 }
 
-// 3. KARIGER OVERALL FINANCE SUMMARY (MULTI-KARKHANA SAFE)
+// 3. KARIGER OVERALL FINANCE SUMMARY
 function getKarigerFinanceSummary(karId, targetKarkhanaId) {
     var sheets = getKarigerSheets(karId);
     var totalMazdoori = 0;
