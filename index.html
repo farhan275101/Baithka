@@ -157,7 +157,16 @@
                     <button class="add-btn" onclick="toggleKarigerForm()">+ Naya Kariger</button>
                 </div>
                 <div id="kariger-karkhana-tabs-bar" class="sheet-tabs-bar" style="margin-bottom:12px;"></div>
-                <div class="filter-panel"><input type="text" id="search-kariger-input" class="search-box" placeholder="🔍 Search Kariger..." oninput="filterKariger()"></div>
+                <div class="filter-panel">
+                    <input type="text" id="search-kariger-input" class="search-box" placeholder="🔍 Search Kariger..." oninput="filterKariger()">
+                    <select id="kariger-absent-filter" class="search-box" style="max-width:180px;" onchange="filterKariger()">
+                        <option value="0">Sabhi Kariger</option>
+                        <option value="15">⚠️ 15 Din se Absent</option>
+                        <option value="20">⚠️ 20 Din se Absent</option>
+                        <option value="30">🔴 30 Din se Absent</option>
+                        <option value="40">🔴 40 Din se Absent</option>
+                    </select>
+                </div>
                 <div id="add-kariger-form" class="custom-form" style="display:none;">
                     <input type="hidden" id="kar-edit-id">
                     <div class="form-row-4">
